@@ -1,6 +1,16 @@
 # OpenCode Nexus
 
-Premium AI desktop dashboard. Scaffolded and tooling-ready — app build not started.
+Premium AI desktop dashboard. Phase 1 (connection, shell, live chat) implemented — see `docs/SPEC-PHASE1.md` and `docs/PLAN.md`.
+
+### Dev proxy & auth (Phase 1)
+
+`npm run dev` proxies `/api/*` (and `/llm/*`, reserved for Phase 2) to the local
+OpenCode service, injecting HTTP Basic auth read server-side from
+`~/.local/state/opencode/service.json`. The password never reaches the browser.
+The **target URL is pinned at dev-server boot** — if the service restarts on a
+*different port*, restart the dev server; a password rotation self-heals on the
+next request (mtime-cached re-read). Never bypass the proxy: `EventSource`
+cannot set auth headers itself.
 
 ## Stack (installed & verified)
 

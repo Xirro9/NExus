@@ -1,7 +1,7 @@
 // Status rail: AI core, live session token/cost block (mono), server card,
 // permission badge placeholder (Phase 3).
 
-import { useConnectionStatus, useIsBusy } from "@/store/selectors"
+import { useIsBusy } from "@/store/selectors"
 import { useNexus } from "@/store/nexus"
 import type { SessionInfo } from "@/lib/opencode/types"
 import { ShieldAlert } from "lucide-react"
@@ -50,13 +50,17 @@ function TokenBlock({ session }: { session: SessionInfo }) {
 
 export function StatusRail({ session }: { session: SessionInfo | null }) {
   const busy = useIsBusy()
-  const connection = useConnectionStatus()
+  // primitives only — `connection` changes on every event (liveness stamp)
+  const version = useNexus((s) => s.connection.version)
+  const hostname = useNexus((s) => s.connection.hostname)
+  const url = useNexus((s) => s.connection.url)
+  const offline = useNexus((s) => s.connection.status === "offline")
   const pendingPermissions = useNexus((s) => s.pendingPermissions)
 
   return (
     <div className="flex h-full flex-col gap-3 overflow-y-auto p-3">
       <div className="flex items-center justify-center py-2">
-        {connection.status === "offline" ? (
+        {offline ? (
           <StaticCore dim />
         ) : (
           <AiCore state={busy ? "thinking" : "idle"} />
@@ -78,15 +82,15 @@ export function StatusRail({ session }: { session: SessionInfo | null }) {
         <dl className="space-y-1 font-mono text-xs">
           <div className="flex justify-between gap-2">
             <dt className="text-muted-foreground">version</dt>
-            <dd>{connection.version ?? "—"}</dd>
+            <dd>{version ?? "—"}</dd>
           </div>
           <div className="flex justify-between gap-2">
             <dt className="shrink-0 text-muted-foreground">host</dt>
-            <dd className="truncate">{connection.hostname ?? "—"}</dd>
+            <dd className="truncate">{hostname ?? "—"}</dd>
           </div>
           <div className="flex justify-between gap-2">
             <dt className="shrink-0 text-muted-foreground">url</dt>
-            <dd className="truncate">{connection.url ?? "—"}</dd>
+            <dd className="truncate">{url ?? "—"}</dd>
           </div>
         </dl>
       </div>

@@ -85,6 +85,14 @@ export function MessageBubble({ message }: { message: ChatMessage }) {
       .filter((p): p is TextPart => p.type === "text")
       .map((p) => p.text)
       .join("\n")
+    if (text === "") {
+      // slash-command invocations arrive as user messages with no text part
+      return (
+        <div className="text-center font-mono text-[11px] text-muted-foreground/70">
+          [/command]
+        </div>
+      )
+    }
     return (
       <div className="flex justify-end">
         <div className="max-w-[85%] rounded-xl bg-secondary px-3.5 py-2 text-secondary-foreground">

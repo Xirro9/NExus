@@ -156,11 +156,19 @@ function handleApiError(endpoint: string, err: unknown) {
 // ---------------------------------------------------------------------------
 
 export const useNexus = create<NexusState>()((set, get) => {
-  /** Directory of the active project (falls back to server cwd when unset). */
+  /**
+   * Directory for new sessions / session listings: the project selected in the
+   * sidebar, else the most recently active project (projects carry time.active).
+   */
   function activeDirectory(): string | undefined {
     const { projects, activeProjectId } = get()
-    const project = projects.find((p) => p.id === activeProjectId)
-    return project?.canonical
+    if (activeProjectId) {
+      return projects.find((p) => p.id === activeProjectId)?.canonical
+    }
+    const newest = [...projects].sort(
+      (a, b) => (b.time.active ?? b.time.updated) - (a.time.active ?? a.time.updated),
+    )[0]
+    return newest?.canonical
   }
 
   async function resync(): Promise<void> {
@@ -185,6 +193,11 @@ export const useNexus = create<NexusState>()((set, get) => {
       set({
         sessions: Object.fromEntries(sessions.map((s) => [s.id, s])),
         sessionOrder: sessions.map((s) => s.id),
+        // heal a stuck busy flag: a session with time.idle set is not running
+        // (covers a missed execution.succeeded during an SSE drop)
+        busy: Object.fromEntries(
+          sessions.map((s) => [s.id, s.time.idle === undefined && (get().busy[s.id] ?? false)]),
+        ),
       })
       const activeId = get().activeSessionId
       if (activeId) {
@@ -356,6 +369,8 @@ export const useNexus = create<NexusState>()((set, get) => {
     applyEvent(e) {
       const prev = get()
       const next = applyEvent(prev, e)
+      // stamp liveness; consumers must select primitives off `connection`,
+      // never the object itself (it changes on every event)
       set({
         ...next,
         connection: { ...next.connection, lastEventAt: e.created },
@@ -375,3 +390,8 @@ export const useNexus = create<NexusState>()((set, get) => {
     },
   }
 })
+
+// dev-only debug handle (T10 drills, browser-console verification)
+if (import.meta.env.DEV) {
+  ;(window as unknown as Record<string, unknown>).__nexus = useNexus
+}

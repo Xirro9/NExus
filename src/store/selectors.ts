@@ -10,9 +10,12 @@ export function useActiveSession(): SessionInfo | null {
   )
 }
 
+const EMPTY_MESSAGES: ChatMessage[] = []
+
 export function useActiveMessages(): ChatMessage[] {
+  // stable fallback: a fresh [] per call would loop useSyncExternalStore
   return useNexus((s) =>
-    s.activeSessionId ? (s.messages[s.activeSessionId] ?? []) : [],
+    s.activeSessionId ? (s.messages[s.activeSessionId] ?? EMPTY_MESSAGES) : EMPTY_MESSAGES,
   )
 }
 

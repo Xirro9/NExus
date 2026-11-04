@@ -45,8 +45,10 @@ function mapMessages(
   sessionID: string,
   fn: (msgs: ChatMessage[]) => ChatMessage[],
 ): NexusState {
-  const msgs = state.messages[sessionID]
-  if (!msgs) return state
+  // self-initializing: events for a session whose message list hasn't been
+  // fetched yet must not be dropped (e.g. activated while listMessages is
+  // in flight, or a session created in another client)
+  const msgs = state.messages[sessionID] ?? []
   return { ...state, messages: { ...state.messages, [sessionID]: fn(msgs) } }
 }
 
@@ -68,8 +70,7 @@ function ensureStreamingMessage(
   messageID: string,
   extra?: Partial<ChatMessage>,
 ): NexusState {
-  const msgs = state.messages[sessionID]
-  if (!msgs) return state
+  const msgs = state.messages[sessionID] ?? []
   if (msgs.some((m) => m.id === messageID)) return state
   return {
     ...state,

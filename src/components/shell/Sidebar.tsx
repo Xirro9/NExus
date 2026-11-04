@@ -4,14 +4,14 @@
 import { useMemo } from "react"
 
 import { useNexus } from "@/store/nexus"
-import { useConnectionStatus } from "@/store/selectors"
+import { useStatus } from "@/store/selectors"
 
 import { ConnectionBadge } from "./ConnectionBadge"
 import { SessionListItem } from "./SessionListItem"
 
 export function Sidebar() {
-  const status = useConnectionStatus().status
-  const version = useConnectionStatus().version
+  const status = useStatus()
+  const version = useNexus((s) => s.connection.version)
   const sessionOrder = useNexus((s) => s.sessionOrder)
   const sessions = useNexus((s) => s.sessions)
   const busy = useNexus((s) => s.busy)
