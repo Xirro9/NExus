@@ -1,6 +1,9 @@
 // Typed fetch wrapper for the OpenCode v2.2.0 API.
-// All paths are origin-relative — auth is injected by the Vite dev proxy
-// (never bypass it; EventSource cannot set headers on its own).
+// All paths are origin-relative — auth is injected by the active transport
+// (Vite dev proxy in a browser; Rust api_fetch inside the Tauri shell). The
+// password never reaches this layer (Phase 1 decision).
+
+import { transport } from "@/lib/transport"
 
 import type {
   AgentInfo,
@@ -55,25 +58,31 @@ function unwrap<T>(json: unknown): T {
   return json as T
 }
 
+/** Minimal Response surface the client needs — backed by the transport. */
+interface RawResponse {
+  ok: boolean
+  status: number
+  statusText: string
+  json(): Promise<unknown>
+  text(): Promise<string>
+}
+
 /** Fetch + ApiError mapping, WITHOUT envelope unwrapping — for endpoints
  *  whose response carries more than a single `data` field (e.g. /api/session
  *  returns { location, data, cursor }). */
-async function requestRaw(path: string, init?: RequestInit): Promise<Response> {
-  const res = await fetch(path, {
-    ...init,
-    headers: {
-      ...(init?.body !== undefined
-        ? { "content-type": "application/json" }
-        : {}),
-      ...init?.headers,
-    },
+async function requestRaw(path: string, init?: RequestInit): Promise<RawResponse> {
+  const res = await transport.request(path, {
+    method: init?.method,
+    // client.ts only ever sends pre-serialized JSON strings
+    body: typeof init?.body === "string" ? init.body : null,
+    headers: init?.headers as Record<string, string> | undefined,
   })
   if (!res.ok) {
     let tag: string | null = null
-    let message = `${res.status} ${res.statusText}`
+    let message = `${res.status} ${res.statusText}`.trimEnd()
     try {
       // auth-failure body shape: { _tag: "UnauthorizedError", message }
-      const body = (await res.json()) as { _tag?: string; message?: string }
+      const body = JSON.parse(res.bodyText) as { _tag?: string; message?: string }
       if (body._tag) tag = body._tag
       if (body.message) message = body.message
     } catch {
@@ -81,7 +90,13 @@ async function requestRaw(path: string, init?: RequestInit): Promise<Response> {
     }
     throw new ApiError(res.status, tag, message)
   }
-  return res
+  return {
+    ok: res.ok,
+    status: res.status,
+    statusText: res.statusText,
+    json: () => Promise.resolve(JSON.parse(res.bodyText) as unknown),
+    text: () => Promise.resolve(res.bodyText),
+  }
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
@@ -353,14 +368,14 @@ export const api = {
    *  {_tag} body and throw ApiError. ⚠ Callers MUST use the MEMORY_FILES
    *  whitelist (SPEC-PHASE3 §4.3) — the endpoint accepts absolute paths. */
   async readFsFile(absolutePath: string): Promise<string> {
-    const res = await fetch(
+    const res = await transport.request(
       "/api/fs/read/" + encodeURIComponent(absolutePath),
     )
     if (!res.ok) {
       let tag: string | null = null
-      let message = `${res.status} ${res.statusText}`
+      let message = `${res.status} ${res.statusText}`.trimEnd()
       try {
-        const body = (await res.json()) as { _tag?: string; message?: string }
+        const body = JSON.parse(res.bodyText) as { _tag?: string; message?: string }
         if (body._tag) tag = body._tag
         if (body.message) message = body.message
       } catch {
@@ -368,6 +383,6 @@ export const api = {
       }
       throw new ApiError(res.status, tag, message)
     }
-    return res.text()
+    return res.bodyText
   },
 }
