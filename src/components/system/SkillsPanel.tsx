@@ -8,6 +8,8 @@ import { useState } from "react"
 import { renderMarkdown } from "@/lib/markdown"
 import type { SkillInfo } from "@/lib/opencode/types"
 
+import { SkeletonRows } from "./SkeletonRows"
+
 function SkillRow({ skill }: { skill: SkillInfo }) {
   const [open, setOpen] = useState(false)
   return (
@@ -38,7 +40,7 @@ function SkillRow({ skill }: { skill: SkillInfo }) {
       {open && (
         <div className="border-t border-border/60 px-3 py-2">
           <div
-            className="md-body"
+            className="md-body max-w-[72ch]"
             dangerouslySetInnerHTML={{ __html: renderMarkdown(skill.content) }}
           />
         </div>
@@ -49,7 +51,7 @@ function SkillRow({ skill }: { skill: SkillInfo }) {
 
 export function SkillsPanel({ skills }: { skills: SkillInfo[] | null }) {
   if (skills === null) {
-    return <p className="text-xs text-muted-foreground">Loading skills…</p>
+    return <SkeletonRows rows={3} />
   }
   if (skills.length === 0) {
     return <p className="text-xs text-muted-foreground">No skills installed.</p>

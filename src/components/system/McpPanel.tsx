@@ -3,6 +3,8 @@
 
 import type { McpServerInfo } from "@/lib/opencode/types"
 
+import { SkeletonRows } from "./SkeletonRows"
+
 const STATUS_STYLE: Record<
   McpServerInfo["status"]["status"],
   { dot: string; label: string; cls: string }
@@ -16,7 +18,7 @@ const STATUS_STYLE: Record<
 
 export function McpPanel({ servers }: { servers: McpServerInfo[] | null }) {
   if (servers === null) {
-    return <p className="text-xs text-muted-foreground">Loading MCP servers…</p>
+    return <SkeletonRows rows={2} />
   }
   if (servers.length === 0) {
     return <p className="text-xs text-muted-foreground">No MCP servers configured.</p>

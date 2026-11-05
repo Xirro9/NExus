@@ -20,7 +20,12 @@ export function ProjectsView({
 
   return (
     <div className="mx-auto h-full w-full max-w-[900px] overflow-y-auto p-5 pb-10">
-      <h1 className="mb-4 text-lg font-semibold tracking-tight">Projects</h1>
+      <h1 className="mb-4 flex items-baseline gap-3 text-lg font-semibold tracking-tight">
+        Projects
+        <span className="font-mono text-[11px] font-normal text-muted-foreground/80">
+          {sorted.length} project{sorted.length === 1 ? "" : "s"}
+        </span>
+      </h1>
       {sorted.length === 0 ? (
         <div className="rounded-xl border border-dashed border-border/70 px-4 py-10 text-center">
           <p className="text-sm text-muted-foreground">No projects known.</p>

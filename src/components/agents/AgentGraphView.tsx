@@ -5,7 +5,7 @@
 // 5 s reconciliation while this view is visible (§2.2, single-slot budget).
 
 import { Suspense, lazy, useEffect, useMemo } from "react"
-import { Globe, Network } from "lucide-react"
+import { Globe, Network, Radar } from "lucide-react"
 
 import { useNexus } from "@/store/nexus"
 import { useWorkspace } from "@/store/workspace"
@@ -97,18 +97,16 @@ export function AgentGraphView({
       </div>
       <div className="flex min-h-0 flex-1">
         <div className="relative min-h-0 min-w-0 flex-1">
-          <Suspense
-            fallback={
-              <div className="flex h-full items-center justify-center text-xs text-muted-foreground">
-                Loading graph…
-              </div>
-            }
-          >
-            <AgentGraphCanvas
-              nodes={nodes}
-              edges={edges}
-              positions={positions}
-            />
+          <Suspense fallback={<GraphFallback label="Loading graph…" />}>
+            {nodes.length === 0 ? (
+              <GraphEmpty scoped={!graphScopeAll} />
+            ) : (
+              <AgentGraphCanvas
+                nodes={nodes}
+                edges={edges}
+                positions={positions}
+              />
+            )}
           </Suspense>
         </div>
         {selected && (
@@ -119,6 +117,31 @@ export function AgentGraphView({
           />
         )}
       </div>
+    </div>
+  )
+}
+
+/** Suspense fallback for the lazy xyflow chunk — matches the app's warm pulse. */
+function GraphFallback({ label }: { label: string }) {
+  return (
+    <div className="flex h-full items-center justify-center gap-2 text-xs text-muted-foreground">
+      <span className="size-1.5 animate-pulse rounded-full bg-primary/70" aria-hidden />
+      {label}
+    </div>
+  )
+}
+
+/** Zero-node state — honest "nothing is running" instead of a bare canvas. */
+function GraphEmpty({ scoped }: { scoped: boolean }) {
+  return (
+    <div className="flex h-full flex-col items-center justify-center gap-2 px-6 text-center">
+      <Radar className="size-5 text-muted-foreground/60" aria-hidden />
+      <p className="text-sm text-muted-foreground">No agent activity yet.</p>
+      <p className="max-w-[36ch] text-xs text-muted-foreground/80">
+        {scoped
+          ? "Sessions and subagents for the active project appear here as they run."
+          : "Sessions and subagents across all projects appear here as they run."}
+      </p>
     </div>
   )
 }

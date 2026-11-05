@@ -3,6 +3,8 @@
 
 import type { PluginInfo } from "@/lib/opencode/types"
 
+import { SkeletonRows } from "./SkeletonRows"
+
 function sourceLabel(p: PluginInfo): string {
   switch (p.source.type) {
     case "builtin":
@@ -69,7 +71,7 @@ function PluginRow({ plugin }: { plugin: PluginInfo }) {
 
 export function PluginsPanel({ plugins }: { plugins: PluginInfo[] | null }) {
   if (plugins === null) {
-    return <p className="text-xs text-muted-foreground">Loading plugins…</p>
+    return <SkeletonRows rows={4} />
   }
   const failed = plugins.filter((p) => p.state.status === "failed")
   const active = plugins.filter((p) => p.state.status === "active")

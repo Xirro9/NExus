@@ -63,13 +63,20 @@ export default function AgentGraphCanvas({
   )
   const edges: Edge[] = useMemo(
     () =>
-      agentEdges.map((e) => ({
-        id: e.id,
-        source: e.source,
-        target: e.target,
-        type: "smoothstep",
-        animated: runningIds.has(e.source) || runningIds.has(e.target),
-      })),
+      agentEdges.map((e) => {
+        const busy = runningIds.has(e.source) || runningIds.has(e.target)
+        return {
+          id: e.id,
+          source: e.source,
+          target: e.target,
+          type: "smoothstep",
+          animated: busy,
+          // busy sessions carry the cyan flow; idle edges stay hairline-neutral
+          style: busy
+            ? { stroke: "var(--primary)", strokeWidth: 1.5 }
+            : { strokeWidth: 1 },
+        }
+      }),
     [agentEdges, runningIds],
   )
 
@@ -91,8 +98,9 @@ export default function AgentGraphCanvas({
       <Controls showInteractive={false} />
       <MiniMap
         pannable
+        ariaLabel="Graph minimap"
         nodeColor={(n) => statusColor((n.data as AgentNodeData).status)}
-        className="!bg-card !border-border/60"
+        className="!border-border/60"
       />
     </ReactFlow>
   )

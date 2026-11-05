@@ -5,7 +5,7 @@
 
 import { useEffect, useRef } from "react"
 import { AnimatePresence, motion } from "motion/react"
-import { X } from "lucide-react"
+import { ShieldCheck, X } from "lucide-react"
 
 import { useNexus } from "@/store/nexus"
 import { usePermissionRequests } from "@/store/selectors"
@@ -93,7 +93,7 @@ export function PermissionDrawer({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className="fixed inset-0 z-40 bg-background/60"
+            className="fixed inset-0 z-40 bg-background/60 backdrop-blur-[2px]"
             onClick={onClose}
             aria-hidden
           />
@@ -128,7 +128,8 @@ export function PermissionDrawer({
             </header>
             <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-3">
               {requests.length === 0 ? (
-                <div className="rounded-xl border border-dashed border-border/70 px-4 py-8 text-center">
+                <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed border-border/70 px-4 py-8 text-center">
+                  <ShieldCheck className="size-5 text-muted-foreground/60" aria-hidden />
                   <p className="text-xs text-muted-foreground">
                     No pending requests — agents run freely within their rules.
                   </p>

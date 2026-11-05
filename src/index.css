@@ -300,9 +300,20 @@
 /* xyflow overrides scoped to match the Nexus tokens (SPEC-PHASE3 §10) */
 .react-flow {
   --xy-background-color: transparent;
+  --xy-background-pattern-color: oklch(0.30 0.02 265 / 0.8);
   --xy-edge-stroke-default: color-mix(in oklab, var(--border) 90%, transparent);
   --xy-edge-stroke-selected-default: var(--primary);
   --xy-attribution-background-color-default: transparent;
+
+  /* minimap: kill the default white plate — dark card surface, masked viewport */
+  --xy-minimap-background-color: var(--card);
+  --xy-minimap-background-color-default: var(--card);
+  --xy-minimap-mask-background-color: oklch(0.10 0.014 265 / 0.55);
+  --xy-minimap-mask-background-color-default: oklch(0.10 0.014 265 / 0.55);
+  --xy-minimap-mask-stroke-color: transparent;
+  --xy-minimap-mask-stroke-color-default: transparent;
+  --xy-minimap-node-stroke-color: transparent;
+  --xy-minimap-node-stroke-color-default: transparent;
 }
 .react-flow .react-flow__attribution {
   font-size: 8px;

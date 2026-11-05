@@ -2,6 +2,7 @@
 // "Open in Chat" jump. Read-only facts from the projected node.
 
 import { ArrowRight } from "lucide-react"
+import { motion, useReducedMotion } from "motion/react"
 
 import { fmtTokens } from "@/lib/format"
 import type { AgentNode } from "./graph"
@@ -35,8 +36,14 @@ export function AgentDetailPanel({
 }) {
   const duration =
     (node.updatedAt || node.createdAt) - node.createdAt
+  const reduceMotion = useReducedMotion()
   return (
-    <aside className="flex w-[280px] shrink-0 flex-col gap-3 overflow-y-auto border-l border-border/70 bg-sidebar p-3">
+    <motion.aside
+      initial={reduceMotion ? false : { x: 24, opacity: 0 }}
+      animate={{ x: 0, opacity: 1 }}
+      transition={{ duration: 0.25, ease: "easeOut" }}
+      className="flex w-[280px] shrink-0 flex-col gap-3 overflow-y-auto border-l border-border/70 bg-sidebar p-3"
+    >
       <h2 className="text-[11px] font-semibold tracking-wider text-muted-foreground uppercase">
         Agent detail
       </h2>
@@ -95,6 +102,6 @@ export function AgentDetailPanel({
         Open in Chat
         <ArrowRight className="size-3.5" aria-hidden />
       </button>
-    </aside>
+    </motion.aside>
   )
 }

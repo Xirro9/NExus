@@ -123,7 +123,7 @@ export function MemoryViewer() {
           )}
           {entry.status === "ok" && entry.content !== null && (
             <div
-              className="md-body"
+              className="md-body max-w-[72ch]"
               dangerouslySetInnerHTML={{ __html: renderMarkdown(entry.content) }}
             />
           )}

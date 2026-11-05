@@ -3,9 +3,21 @@
 // in Session.Info and per-row message fetches would spam the single-slot
 // server (honest omission).
 
+import { ArrowUpRight } from "lucide-react"
+
 import { useNexus } from "@/store/nexus"
 import { fmtTokens } from "@/lib/format"
 import type { SessionInfo } from "@/lib/opencode/types"
+
+function relativeTime(ts: number): string {
+  const diff = Date.now() - ts
+  const min = Math.floor(diff / 60_000)
+  if (min < 1) return "now"
+  if (min < 60) return `${min}m`
+  const h = Math.floor(min / 60)
+  if (h < 24) return `${h}h`
+  return `${Math.floor(h / 24)}d`
+}
 
 function humanDuration(ms: number): string {
   if (ms <= 0) return "—"
@@ -57,16 +69,28 @@ export function HistoryCard({
     <button
       type="button"
       onClick={() => onOpen(session.id)}
-      className="w-full rounded-xl border border-border/70 bg-card p-3 text-left transition-colors duration-150 hover:border-muted-foreground/40 hover:bg-secondary/40"
+      className="group w-full rounded-xl border border-border/70 bg-card p-3 text-left transition-colors duration-150 hover:border-muted-foreground/40 hover:bg-secondary/40"
     >
       <div className="flex items-baseline justify-between gap-3">
         <span className="min-w-0 flex-1 truncate text-[13px] font-medium">
           {session.title || "Untitled session"}
         </span>
-        <span
-          className={`shrink-0 rounded-md border px-1.5 py-0.5 font-mono text-[10px] ${chip.cls}`}
-        >
-          {chip.label}
+        <span className="flex shrink-0 items-center gap-1.5">
+          <span
+            className="font-mono text-[10px] text-muted-foreground/70"
+            title={new Date(session.time.updated || session.time.created).toLocaleString()}
+          >
+            {relativeTime(session.time.updated || session.time.created)}
+          </span>
+          <span
+            className={`rounded-md border px-1.5 py-0.5 font-mono text-[10px] ${chip.cls}`}
+          >
+            {chip.label}
+          </span>
+          <ArrowUpRight
+            className="size-3.5 text-muted-foreground/0 transition-colors duration-150 group-hover:text-primary"
+            aria-hidden
+          />
         </span>
       </div>
       <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 font-mono text-[11px] text-muted-foreground">

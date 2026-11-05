@@ -3,7 +3,8 @@
 // sessions + the worktree section. No create/delete affordances anywhere.
 
 import { useState } from "react"
-import { ChevronDown, ChevronRight, ExternalLink } from "lucide-react"
+import { AnimatePresence, motion, useReducedMotion } from "motion/react"
+import { ChevronRight, ExternalLink } from "lucide-react"
 
 import { useNexus } from "@/store/nexus"
 import { useWorkspace } from "@/store/workspace"
@@ -32,6 +33,7 @@ export function ProjectCard({
   const [open, setOpen] = useState(false)
   const [recent, setRecent] = useState<SessionInfo[] | null>(null)
   const [recentError, setRecentError] = useState<string | null>(null)
+  const reduceMotion = useReducedMotion()
   const sessionCount = useNexus(
     (s) =>
       s.sessionOrder.filter((id) => s.sessions[id]?.projectID === project.id)
@@ -62,11 +64,13 @@ export function ProjectCard({
       >
         <div className="flex items-center justify-between gap-2">
           <span className="flex min-w-0 items-center gap-1.5">
-            {open ? (
-              <ChevronDown className="size-3.5 shrink-0 text-muted-foreground" aria-hidden />
-            ) : (
-              <ChevronRight className="size-3.5 shrink-0 text-muted-foreground" aria-hidden />
-            )}
+            <ChevronRight
+              className={
+                "size-3.5 shrink-0 text-muted-foreground transition-transform duration-150 " +
+                (open ? "rotate-90" : "")
+              }
+              aria-hidden
+            />
             <span className="truncate font-mono text-[13px]" title={project.canonical}>
               {project.name || project.canonical}
             </span>
@@ -87,8 +91,17 @@ export function ProjectCard({
         </div>
       </button>
 
-      {open && (
-        <div className="border-t border-border/60 px-4 py-3">
+      <AnimatePresence initial={false}>
+        {open && (
+          <motion.div
+            key="project-card-body"
+            initial={reduceMotion ? false : { height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={reduceMotion ? undefined : { height: 0, opacity: 0 }}
+            transition={{ duration: 0.22, ease: "easeOut" }}
+            style={{ overflow: "hidden" }}
+          >
+            <div className="border-t border-border/60 px-4 py-3">
           <div className="mb-1 flex items-center justify-between">
             <h4 className="text-[11px] font-semibold tracking-wider text-muted-foreground uppercase">
               Recent sessions
@@ -107,7 +120,10 @@ export function ProjectCard({
               Failed to load recent sessions.
             </p>
           ) : recent === null ? (
-            <p className="text-[11px] text-muted-foreground/80">Loading…</p>
+            <div className="space-y-1.5 py-0.5" aria-hidden>
+              <div className="h-2.5 w-3/5 animate-pulse rounded bg-muted" />
+              <div className="h-2.5 w-2/5 animate-pulse rounded bg-muted" />
+            </div>
           ) : recent.length === 0 ? (
             <p className="text-[11px] text-muted-foreground/80">
               No root sessions.
@@ -128,8 +144,10 @@ export function ProjectCard({
             </ul>
           )}
           <WorktreeList projectID={project.id} />
-        </div>
-      )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }

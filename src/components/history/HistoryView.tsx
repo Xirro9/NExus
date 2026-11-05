@@ -66,7 +66,7 @@ export function HistoryView({
           onChange={(e) => setInput(e.target.value)}
           placeholder="Search session titles…"
           aria-label="Search session titles"
-          className="h-9 min-w-56 flex-1 rounded-lg border border-border bg-input/60 px-3 text-sm outline-none placeholder:text-muted-foreground/70"
+          className="h-9 min-w-56 flex-1 rounded-lg border border-border bg-input/60 px-3 text-sm transition-colors placeholder:text-muted-foreground/70 focus:border-primary/60"
         />
         <select
           value={historyProjectId ?? ""}
@@ -116,7 +116,20 @@ export function HistoryView({
       )}
 
       {/* results */}
-      {results.length === 0 && !historyLoading && !historyError ? (
+      {historyLoading && results.length === 0 && !historyError ? (
+        <ul className="space-y-2" aria-hidden>
+          {[0, 1, 2, 3].map((i) => (
+            <li
+              key={i}
+              className="animate-pulse rounded-xl border border-border/70 bg-card p-3"
+              style={{ animationDelay: `${i * 120}ms`, opacity: 1 - i * 0.15 }}
+            >
+              <div className="h-3.5 w-2/5 rounded bg-muted" />
+              <div className="mt-2.5 h-2.5 w-3/5 rounded bg-muted/70" />
+            </li>
+          ))}
+        </ul>
+      ) : results.length === 0 && !historyLoading && !historyError ? (
         <div className="rounded-xl border border-dashed border-border/70 px-4 py-10 text-center">
           <p className="text-sm text-muted-foreground">No sessions match.</p>
           <p className="mt-1 text-xs text-muted-foreground/80">
