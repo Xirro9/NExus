@@ -127,3 +127,31 @@ OpenCode exposes no host metrics. Real-data sources, local-first:
 - `location.directory` in responses = which project dir answered.
 - SSE is live-only: no replay, no auto-reconnect — client must resync on drop.
 - Auth failure body is `{"_tag":"UnauthorizedError","message":"Authentication required"}`.
+
+## Phase 4 drill results (T35, 2026-11-05)
+
+- **Permission fire-drill — DEFERRED (premise unfulfillable under current
+  config).** A live drill session was created, prompted to create a marker
+  file via the shell tool, and the shell executed WITHOUT any
+  `permission.asked` (verified by polling
+  `GET /api/session/{id}/permission` → `{"data":[]}` throughout, marker file
+  created). Cause: no `permission` block exists in any config layer (checked
+  `~/.config/opencode/opencode.json` and the merged `GET /api/config`
+  document list) — OpenCode v2.2.0 defaults auto-allow bash. Producing a
+  real ask would require adding a permission config to the operator's
+  install, which is out of a subagent's scope. The UI flow (badge → drawer →
+  reply) remains covered by Phase 3's build-time review; rerun this drill
+  after the operator adds e.g. `"permission": { "bash": "ask" }`.
+- **Offline-recovery drill — DEFERRED (safety).** The drill requires
+  `kill <pid>` of the OpenCode service; this session runs INSIDE that
+  service and two operator sessions were live (`/api/session/active`), so
+  the exact-pid kill could not be performed safely. Partial Rust-side
+  coverage shipped instead (mock-runtime tests, `src-tauri/tests/
+  commands_live.rs`): pump reaches `state=open` against the live service,
+  survives 3 s with no error frames, and `event_stream_stop` ends the task
+  with no reconnect. Password-rotation self-heal is mtime-cached in
+  `service.rs` (same mechanism as the vite proxy, verified there in Phase 1).
+  Rerun in a quiet window: kill exact pid from service.json, watch
+  badge/banner/composer, restart with the documented start command.
+- Drill session `ses_e55b775b7ffeSYtdyXCn2v7iKR` deleted via API after the
+  drill (HTTP 204); marker file removed; operator sessions untouched.
