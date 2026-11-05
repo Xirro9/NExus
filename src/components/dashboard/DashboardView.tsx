@@ -11,14 +11,22 @@ import { UsagePanel } from "./UsagePanel"
 
 export function DashboardView({ visible }: { visible: boolean }) {
   return (
-    <div hidden={!visible} className="h-full overflow-y-auto p-4 pb-8">
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-        <SystemPanel visible={visible} />
-        <GpuPanel visible={visible} />
-        <LlmPanel visible={visible} />
-        <ContextPanel visible={visible} />
-        <div className="xl:col-span-2">
-          <UsagePanel visible={visible} />
+    <div hidden={!visible} className="h-full overflow-y-auto">
+      <div className="mx-auto w-full max-w-[1360px] p-5 pb-10">
+        <div className="mb-3 flex items-center gap-2 px-1">
+          <span className="nexus-live size-1.5 rounded-full bg-success shadow-[var(--glow-success)]" />
+          <span className="font-mono text-[10px] tracking-wider text-muted-foreground uppercase">
+            live · 2 s cadence
+          </span>
+        </div>
+        <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
+          <SystemPanel visible={visible} />
+          <GpuPanel visible={visible} />
+          <LlmPanel visible={visible} />
+          <ContextPanel visible={visible} />
+          <div className="xl:col-span-2">
+            <UsagePanel visible={visible} />
+          </div>
         </div>
       </div>
     </div>

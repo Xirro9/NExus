@@ -5,7 +5,7 @@ import { Line, LineChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YA
 
 import { fmtClock } from "@/lib/format"
 import { useComputeApps, useGpuSamples, useTelemetry } from "@/store/telemetry"
-import { AXIS_TICK, TOOLTIP_PROPS, useAnimateOnce } from "./chart-utils"
+import { AXIS_TICK, ChartTooltip, CURSOR_LINE, GRID, useAnimateOnce } from "./chart-utils"
 import { PanelCard, Warming } from "./PanelCard"
 
 const GPU_COLORS = ["var(--chart-1)", "var(--chart-2)", "var(--chart-3)", "var(--chart-4)", "var(--chart-5)"]
@@ -57,7 +57,7 @@ export function GpuPanel({ visible }: { visible: boolean }) {
             {visible ? (
             <ResponsiveContainer width="100%" height="100%" initialDimension={{ width: 640, height: 130 }}>
               <LineChart data={data} margin={{ top: 4, right: 4, bottom: 0, left: 0 }}>
-                <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" vertical={false} />
+                <CartesianGrid {...GRID} />
                 <XAxis
                   dataKey="t"
                   type="number"
@@ -68,11 +68,22 @@ export function GpuPanel({ visible }: { visible: boolean }) {
                   minTickGap={48}
                   tickFormatter={fmtClock}
                 />
-                <YAxis domain={[0, 100]} tick={AXIS_TICK} tickLine={false} axisLine={false} width={30} />
+                <YAxis
+                  domain={[0, 100]}
+                  ticks={[0, 50, 100]}
+                  tick={AXIS_TICK}
+                  tickLine={false}
+                  axisLine={false}
+                  width={26}
+                />
                 <Tooltip
-                  {...TOOLTIP_PROPS}
-                  labelFormatter={(label) => fmtClock(Number(label))}
-                  formatter={(value, name) => [`${String(value)}%`, `GPU ${String(name).slice(1)}`]}
+                  cursor={CURSOR_LINE}
+                  content={
+                    <ChartTooltip
+                      labelFormatter={(label) => fmtClock(Number(label))}
+                      formatter={(value, name) => [`${Number(value).toFixed(1)}%`, `GPU ${String(name).slice(1)}`]}
+                    />
+                  }
                 />
                 {gpus.map((g) => (
                   <Line
@@ -80,8 +91,9 @@ export function GpuPanel({ visible }: { visible: boolean }) {
                     dataKey={`g${g.index}`}
                     name={`g${g.index}`}
                     stroke={GPU_COLORS[g.index % GPU_COLORS.length]}
-                    strokeWidth={1.5}
+                    strokeWidth={1.75}
                     dot={false}
+                    activeDot={{ r: 2.5, strokeWidth: 0 }}
                     isAnimationActive={animate}
                   />
                 ))}
@@ -103,7 +115,9 @@ export function GpuPanel({ visible }: { visible: boolean }) {
                   <span className="truncate text-muted-foreground">{g.name}</span>
                 </span>
                 <span className="shrink-0 tabular-nums">
-                  {g.memUsed}/{g.memTotal} MiB · {g.tempGpu}°C · {g.powerDraw.toFixed(1)}W
+                  {g.memUsed}/{g.memTotal} MiB ·{" "}
+                  <span className={g.tempGpu >= 80 ? "text-warning" : undefined}>{g.tempGpu}°C</span> ·{" "}
+                  {g.powerDraw.toFixed(1)}W
                 </span>
               </li>
             ))}

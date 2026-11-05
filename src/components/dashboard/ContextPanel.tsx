@@ -6,13 +6,14 @@
 
 import { useEffect, useState } from "react"
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts"
+import { MessageSquare } from "lucide-react"
 
 import { api } from "@/lib/opencode/client"
 import type { ContextMessage } from "@/lib/opencode/types"
 import { useActiveSession } from "@/store/selectors"
 import { useNexus } from "@/store/nexus"
 import { useContextLimit } from "@/hooks/useContextLimit"
-import { AXIS_TICK, TOOLTIP_PROPS, useAnimateOnce } from "./chart-utils"
+import { AXIS_TICK, ChartTooltip, CURSOR_RECT, GRID, useAnimateOnce } from "./chart-utils"
 import { ContextBar } from "./ContextBar"
 import { PanelCard } from "./PanelCard"
 
@@ -78,7 +79,12 @@ export function ContextPanel({ visible }: { visible: boolean }) {
       }
     >
       {!session ? (
-        <p className="py-1 text-xs text-muted-foreground">No active session.</p>
+        <div className="flex flex-1 items-center justify-center rounded-lg border border-dashed border-border/70 bg-muted/20 py-8 text-xs text-muted-foreground">
+          <span className="flex items-center gap-2">
+            <MessageSquare className="size-3.5" aria-hidden />
+            No active session — open or create one to see its context footprint.
+          </span>
+        </div>
       ) : (
         <div className="space-y-3">
           <div>
@@ -117,7 +123,7 @@ export function ContextPanel({ visible }: { visible: boolean }) {
                 {visible ? (
                 <ResponsiveContainer width="100%" height="100%" initialDimension={{ width: 640, height: 130 }}>
                   <BarChart data={msgRows} margin={{ top: 4, right: 4, bottom: 0, left: 0 }}>
-                    <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" vertical={false} />
+                    <CartesianGrid {...GRID} />
                     <XAxis
                       dataKey="i"
                       tick={AXIS_TICK}
@@ -133,16 +139,27 @@ export function ContextPanel({ visible }: { visible: boolean }) {
                       tickFormatter={(v: number) => (v >= 1000 ? `${Math.round(v / 1000)}k` : String(v))}
                     />
                     <Tooltip
-                      {...TOOLTIP_PROPS}
-                      labelFormatter={(label) => {
-                        const r = msgRows[Number(label)]
-                        return r ? `#${r.i} · …${r.suffix} · ${r.model}` : `#${String(label)}`
-                      }}
+                      cursor={CURSOR_RECT}
+                      content={
+                        <ChartTooltip
+                          labelFormatter={(label) => {
+                            const r = msgRows[Number(label)]
+                            return r ? `#${r.i} · …${r.suffix} · ${r.model}` : `#${String(label)}`
+                          }}
+                        />
+                      }
                     />
                     <Bar dataKey="input" name="input" stackId="t" fill="var(--chart-1)" isAnimationActive={animate} />
                     <Bar dataKey="output" name="output" stackId="t" fill="var(--chart-2)" isAnimationActive={animate} />
                     <Bar dataKey="reasoning" name="reasoning" stackId="t" fill="var(--chart-4)" isAnimationActive={animate} />
-                    <Bar dataKey="cacheRead" name="cache read" stackId="t" fill="var(--chart-3)" isAnimationActive={animate} />
+                    <Bar
+                      dataKey="cacheRead"
+                      name="cache read"
+                      stackId="t"
+                      fill="var(--chart-3)"
+                      radius={[2, 2, 0, 0]}
+                      isAnimationActive={animate}
+                    />
                   </BarChart>
                 </ResponsiveContainer>
                 ) : (

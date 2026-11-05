@@ -70,8 +70,13 @@ export function ContextBar({ tokens, ctxLimit, relative }: ContextBarProps) {
             : `context footprint ${used} tokens, limit unknown`
         }
         className={
-          "relative h-2.5 overflow-hidden rounded-full bg-muted/50 " +
-          (unknown ? "border border-dashed border-border" : "")
+          "relative h-2.5 overflow-hidden rounded-full " +
+          (tone === "destructive"
+            ? "bg-destructive/15 ring-1 ring-destructive/40 ring-inset"
+            : tone === "warning"
+              ? "bg-warning/15 ring-1 ring-warning/40 ring-inset"
+              : "bg-muted/50") +
+          (unknown ? " border border-dashed border-border" : "")
         }
       >
         {!unknown &&
@@ -110,6 +115,11 @@ export function ContextBar({ tokens, ctxLimit, relative }: ContextBarProps) {
               : "ctx unknown"}
         </span>
       </div>
+      {tone === "warning" && (
+        <p className="mt-1 font-mono text-[10px] text-warning">
+          ≥80% of context limit — approaching the window
+        </p>
+      )}
       {tone === "destructive" && (
         <p className="mt-1 font-mono text-[10px] text-destructive">
           ≥95% of context limit — consider /compact

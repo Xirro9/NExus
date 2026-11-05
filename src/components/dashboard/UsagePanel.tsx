@@ -11,7 +11,7 @@ import { api } from "@/lib/opencode/client"
 import type { SessionStatsInfo } from "@/lib/opencode/types"
 import { fmtTokens } from "@/lib/format"
 import { useNexus } from "@/store/nexus"
-import { AXIS_TICK, TOOLTIP_PROPS, useAnimateOnce } from "./chart-utils"
+import { AXIS_TICK, ChartTooltip, CURSOR_RECT, GRID, useAnimateOnce } from "./chart-utils"
 import { ContextBar } from "./ContextBar"
 import { PanelCard } from "./PanelCard"
 
@@ -170,28 +170,35 @@ export function UsagePanel({ visible }: { visible: boolean }) {
                 </div>
               </div>
               {stats.tools.mode === "detail" && stats.tools.usage ? (
-                <table className="w-full font-mono text-[11px]">
-                  <thead>
-                    <tr className="text-left text-[10px] tracking-wider text-muted-foreground uppercase">
-                      <th className="pb-1 font-medium">tool</th>
-                      <th className="pb-1 text-right font-medium">calls</th>
-                      <th className="pb-1 text-right font-medium">ok</th>
-                      <th className="pb-1 text-right font-medium">fail</th>
-                      <th className="pb-1 text-right font-medium">p50 ms</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {stats.tools.usage.map((u) => (
-                      <tr key={u.name} className="border-t border-border/50">
-                        <td className="py-1">{u.name}</td>
-                        <td className="py-1 text-right tabular-nums">{u.calls}</td>
-                        <td className="py-1 text-right tabular-nums">{u.succeeded}</td>
-                        <td className="py-1 text-right tabular-nums">{u.failed}</td>
-                        <td className="py-1 text-right tabular-nums">{u.durationP50}</td>
+                <div className="overflow-x-auto">
+                  <table className="w-full font-mono text-[11px]">
+                    <thead>
+                      <tr className="border-b border-border/70 text-left text-[10px] tracking-wider text-muted-foreground uppercase">
+                        <th className="pb-1.5 font-medium">tool</th>
+                        <th className="pb-1.5 text-right font-medium">calls</th>
+                        <th className="pb-1.5 text-right font-medium">ok</th>
+                        <th className="pb-1.5 text-right font-medium">fail</th>
+                        <th className="pb-1.5 text-right font-medium">p50 ms</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      {stats.tools.usage.map((u) => (
+                        <tr
+                          key={u.name}
+                          className="border-t border-border/40 transition-colors duration-100 first:border-t-0 hover:bg-secondary/30"
+                        >
+                          <td className="py-1.5">{u.name}</td>
+                          <td className="py-1.5 text-right tabular-nums">{u.calls}</td>
+                          <td className="py-1.5 text-right tabular-nums">{u.succeeded}</td>
+                          <td className={"py-1.5 text-right tabular-nums" + (u.failed > 0 ? " text-destructive" : "")}>
+                            {u.failed}
+                          </td>
+                          <td className="py-1.5 text-right tabular-nums">{u.durationP50}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               ) : (
                 <p className="font-mono text-[10px] text-muted-foreground">
                   per-tool rows need tools=detail (requested with detail on next refresh)
@@ -209,11 +216,25 @@ export function UsagePanel({ visible }: { visible: boolean }) {
                 {visible ? (
                 <ResponsiveContainer width="100%" height="100%" initialDimension={{ width: 640, height: 130 }}>
                   <BarChart data={activityRows} margin={{ top: 4, right: 4, bottom: 0, left: 0 }}>
-                    <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" vertical={false} />
+                    <defs>
+                      <linearGradient id="nexus-activity-fill" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="var(--chart-1)" stopOpacity={0.9} />
+                        <stop offset="100%" stopColor="var(--chart-1)" stopOpacity={0.35} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid {...GRID} />
                     <XAxis dataKey="date" tick={AXIS_TICK} tickLine={false} axisLine={false} minTickGap={40} />
                     <YAxis tick={AXIS_TICK} tickLine={false} axisLine={false} width={36} allowDecimals={false} />
-                    <Tooltip {...TOOLTIP_PROPS} formatter={(v) => [String(v), "steps"]} />
-                    <Bar dataKey="steps" fill="var(--chart-1)" isAnimationActive={animate} radius={[3, 3, 0, 0]} />
+                    <Tooltip
+                      cursor={CURSOR_RECT}
+                      content={<ChartTooltip formatter={(v) => [String(v), "steps"]} />}
+                    />
+                    <Bar
+                      dataKey="steps"
+                      fill="url(#nexus-activity-fill)"
+                      isAnimationActive={animate}
+                      radius={[3, 3, 0, 0]}
+                    />
                   </BarChart>
                 </ResponsiveContainer>
                 ) : (
@@ -233,12 +254,12 @@ export function UsagePanel({ visible }: { visible: boolean }) {
 
 function Kpi({ label, value, chip }: { label: string; value: string; chip?: string }) {
   return (
-    <div className="rounded-xl border border-border/70 bg-card p-3">
+    <div className="rounded-xl border border-border/70 bg-card p-3 shadow-[inset_0_1px_0_0_oklch(1_0_0/0.03)]">
       <div className="font-mono text-[10px] tracking-wider text-muted-foreground uppercase">
         {label}
       </div>
-      <div className="mt-1 font-mono text-lg leading-none tabular-nums">{value}</div>
-      {chip && <div className="mt-1 font-mono text-[10px] text-muted-foreground">{chip}</div>}
+      <div className="mt-1.5 font-mono text-lg leading-none tabular-nums">{value}</div>
+      {chip && <div className="mt-1.5 font-mono text-[10px] text-muted-foreground">{chip}</div>}
     </div>
   )
 }

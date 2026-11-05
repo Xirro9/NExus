@@ -24,11 +24,11 @@ export function PanelCard({ title, right, dim, degraded, children }: PanelCardPr
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3, ease: "easeOut" }}
       className={
-        "rounded-xl border border-border/70 bg-card p-4 " +
-        (showDegraded || dim ? "opacity-75" : "")
+        "flex h-full flex-col rounded-xl border border-border/70 bg-card p-4 shadow-[inset_0_1px_0_0_oklch(1_0_0/0.03)] transition-opacity duration-300 " +
+        (showDegraded || dim ? "opacity-70" : "")
       }
     >
-      <header className="mb-3 flex items-center justify-between gap-2">
+      <header className="mb-3 flex shrink-0 items-center justify-between gap-2">
         <h3 className="text-[11px] font-semibold tracking-wider text-muted-foreground uppercase">
           {title}
         </h3>
@@ -36,8 +36,8 @@ export function PanelCard({ title, right, dim, degraded, children }: PanelCardPr
       </header>
       {showDegraded ? (
         degraded.children ?? (
-          <div className="flex items-center gap-2 py-1 text-xs text-muted-foreground">
-            <TriangleAlert className="size-3.5 shrink-0" aria-hidden />
+          <div className="flex items-center gap-2 rounded-lg border border-dashed border-border/70 bg-muted/20 px-3 py-2.5 text-xs text-muted-foreground">
+            <TriangleAlert className="size-3.5 shrink-0 text-warning/80" aria-hidden />
             <span>{degraded.error ?? "unavailable"}</span>
           </div>
         )

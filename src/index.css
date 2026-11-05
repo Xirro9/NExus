@@ -175,6 +175,15 @@
   animation: nexus-cursor 1s steps(1) infinite;
 }
 
+/* soft breathing pulse for "live" indicator dots (telemetry, warming states) */
+@keyframes nexus-live {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+.nexus-live {
+  animation: nexus-live 2.4s ease-in-out infinite;
+}
+
 /* animated ellipsis for running tool chips (§8) */
 @keyframes nexus-dots {
   0% { content: ""; }

@@ -15,6 +15,11 @@ const DOT_COLORS = {
   null: "var(--muted-foreground)",
 } as const
 
+/** utilization tone: nominal → warning ≥80% → critical ≥95% */
+function utilTone(v: number): string {
+  return v >= 95 ? "text-destructive" : v >= 80 ? "text-warning" : "text-foreground"
+}
+
 export function TelemetryMini({ session }: { session: SessionInfo | null }) {
   const llm = useLlm()
   const systemSamples = useSystemSamples()
@@ -42,7 +47,7 @@ export function TelemetryMini({ session }: { session: SessionInfo | null }) {
         "rounded-xl border bg-card p-3 " +
         (allNominal
           ? "border-success/40 shadow-[var(--glow-success)]"
-          : "border-border/70")
+          : "border-border/70 shadow-[inset_0_1px_0_0_oklch(1_0_0/0.03)]")
       }
     >
       <h3 className="mb-2.5 text-[11px] font-semibold tracking-wider text-muted-foreground uppercase">
@@ -53,7 +58,9 @@ export function TelemetryMini({ session }: { session: SessionInfo | null }) {
           <dt className="text-muted-foreground">llama</dt>
           <dd className="flex items-center gap-1.5">
             <span
-              className="size-1.5 rounded-full"
+              className={
+                "size-1.5 rounded-full" + (status === "starting" ? " nexus-live" : "")
+              }
               style={{ background: DOT_COLORS[status ?? "null"] }}
               aria-hidden
             />
@@ -63,8 +70,12 @@ export function TelemetryMini({ session }: { session: SessionInfo | null }) {
             )}
           </dd>
         </div>
-        <Row k="cpu" v={sys ? `${sys.cpu.toFixed(1)}%` : "…"} />
-        <Row k="ram" v={ramPct !== null ? `${ramPct.toFixed(1)}%` : "…"} />
+        <Row k="cpu" v={sys ? `${sys.cpu.toFixed(1)}%` : "…"} tone={sys ? utilTone(sys.cpu) : undefined} />
+        <Row
+          k="ram"
+          v={ramPct !== null ? `${ramPct.toFixed(1)}%` : "…"}
+          tone={ramPct !== null ? utilTone(ramPct) : undefined}
+        />
         <Row
           k="gpu"
           v={
@@ -74,6 +85,7 @@ export function TelemetryMini({ session }: { session: SessionInfo | null }) {
                 ? "…"
                 : "n/a"
           }
+          tone={gpuUtil !== null ? utilTone(gpuUtil) : undefined}
         />
       </dl>
       {session && (
@@ -92,11 +104,11 @@ export function TelemetryMini({ session }: { session: SessionInfo | null }) {
   )
 }
 
-function Row({ k, v }: { k: string; v: string }) {
+function Row({ k, v, tone }: { k: string; v: string; tone?: string }) {
   return (
     <div className="flex justify-between gap-2">
       <dt className="text-muted-foreground">{k}</dt>
-      <dd className="tabular-nums">{v}</dd>
+      <dd className={"tabular-nums" + (tone ? ` ${tone}` : "")}>{v}</dd>
     </div>
   )
 }
