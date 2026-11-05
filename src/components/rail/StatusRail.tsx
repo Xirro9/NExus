@@ -151,7 +151,7 @@ export function StatusRail({
               localStorage.setItem(TRAY_HINT_KEY, "1")
               setTrayHintShown(false)
             }}
-            className="rounded p-0.5 transition-colors hover:text-foreground"
+            className="-m-0.5 rounded p-1 transition-colors hover:bg-muted/60 hover:text-foreground"
             aria-label="Dismiss close-to-tray hint"
           >
             <X className="size-3" aria-hidden />
@@ -160,7 +160,7 @@ export function StatusRail({
       )}
 
       <div className="mt-auto pt-3 text-center font-mono text-[10px] text-muted-foreground/80">
-        nexus · phase 3
+        jerry · phase 4
       </div>
     </div>
   )

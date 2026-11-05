@@ -319,12 +319,21 @@
 .md-chat p { margin: 0.45em 0; }
 .md-chat ul, .md-chat ol { margin: 0.45em 0; padding-left: 1.3em; }
 .md-chat pre {
+  /* sunken code well, matching the ToolPartCard <pre> surface (bg-background/60,
+     border-border/50) so markdown fences and tool dumps read as one system */
   margin: 0.6em 0;
+  background: color-mix(in oklab, var(--background) 60%, transparent);
+  border-color: color-mix(in oklab, var(--border) 50%, transparent);
   border-radius: 0.5rem;
+  padding: 0.625rem 0.75rem;
   font-size: 0.8rem;
+  tab-size: 2;
 }
 .md-chat code { font-size: 0.8em; }
 .md-chat blockquote { margin: 0.5em 0; }
+.md-chat table, .md-chat hr { margin: 0.6em 0; }
+/* loose lists (blank line between items): keep the bubble's tight rhythm */
+.md-chat li > p { margin: 0.2em 0; }
 
 /* xyflow overrides scoped to match the Nexus tokens (SPEC-PHASE3 §10) */
 .react-flow {
