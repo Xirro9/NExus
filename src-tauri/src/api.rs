@@ -21,7 +21,7 @@ pub struct ApiFetchArgs {
     pub body: Option<String>,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct ApiFetchResponse {
     pub status: u16,

@@ -30,3 +30,8 @@ tauri-plugin-single-instance = "2"
 reqwest = { version = "0.12", default-features = false, features = ["json", "stream"] }
 tokio = { version = "1", features = ["time", "macros"] }
 base64 = "0.22"
+
+[dev-dependencies]
+# mock app harness for command-level tests (api_fetch / SSE pump against the
+# live local service) — test-only, not part of the shipped binary
+tauri = { version = "2.12.5", features = ["test"] }

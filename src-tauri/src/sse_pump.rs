@@ -11,12 +11,12 @@ use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use tauri::Manager;
 
 use crate::service;
 
-#[derive(Serialize)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct StreamFrame {
     /// "state" | "event"
@@ -34,8 +34,8 @@ pub struct StreamRegistry(Mutex<HashMap<u32, Arc<AtomicBool>>>);
 static NEXT_ID: AtomicU32 = AtomicU32::new(1);
 
 #[tauri::command]
-pub async fn event_stream_start(
-    app: tauri::AppHandle,
+pub async fn event_stream_start<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
     registry: tauri::State<'_, StreamRegistry>,
     channel: tauri::ipc::Channel<StreamFrame>,
 ) -> Result<u32, String> {
@@ -77,8 +77,8 @@ fn state_frame(state: &str) -> StreamFrame {
     }
 }
 
-async fn pump_loop(
-    app: tauri::AppHandle,
+async fn pump_loop<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
     channel: tauri::ipc::Channel<StreamFrame>,
     stop: Arc<AtomicBool>,
 ) {
@@ -170,7 +170,7 @@ async fn stream_response(
 
 /// One SSE connection: resolve() → GET /api/event with injected auth, no
 /// overall timeout (the stream is long-lived by design).
-async fn connect_once(app: &tauri::AppHandle) -> Result<reqwest::Response, String> {
+async fn connect_once<R: tauri::Runtime>(app: &tauri::AppHandle<R>) -> Result<reqwest::Response, String> {
     let target = service::resolve().ok_or("opencode service.json unreadable")?;
     let client = app
         .try_state::<reqwest::Client>()

@@ -1,7 +1,7 @@
-mod api;
-mod service;
-mod sse_pump;
-mod telemetry;
+pub mod api;
+pub mod service;
+pub mod sse_pump;
+pub mod telemetry;
 
 use tauri::{
     menu::{Menu, MenuItem, PredefinedMenuItem},
