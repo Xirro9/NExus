@@ -16,19 +16,21 @@ installation. Local-first, open-source, real telemetry only.
 - [x] Identify host-telemetry gap → local providers (/proc, nvidia-smi, llama-server /health)
 - [x] Write `docs/API-NOTES.md`
 
-## Phase 1 — Foundation: connection, shell, live chat ☐
+## Phase 1 — Foundation: connection, shell, live chat ◐
 
 Goal: a working, beautiful chat client talking to the real OpenCode server.
 
-- [ ] Vite dev proxy: `/api/*` + `/llm/*` → local service, Basic header injected server-side
-- [ ] Typed API client (`src/lib/opencode.ts`) — sessions, messages, prompt, interrupt, agents, commands, config, event SSE w/ resync
-- [ ] Design system: dark futuristic tokens, Geist Variable typography, readability-first contrast
-- [ ] App shell: sidebar (sessions/projects) + main area + status rail; responsive
-- [ ] Live chat: session list, new session, prompt send, streaming updates via SSE, interrupt, slash commands
-- [ ] Connection status + graceful degraded states (server offline)
-- [ ] Animated AI core (idle/thinking states, motion)
+- [x] Vite dev proxy: `/api/*` + `/llm/*` → local service, Basic header injected server-side (mtime cache → password rotation self-heals) — commit `1a180fc`
+- [x] Typed API client (`src/lib/opencode/*`) — sessions, messages, prompt, interrupt, agents, commands, config, event SSE w/ resync + race guards
+- [x] Design system: dark futuristic tokens, Geist Variable typography, readability-first contrast (spec §6 verbatim)
+- [x] App shell: sidebar (sessions/projects) + main area + status rail; responsive
+- [x] Live chat: session list, new session, prompt send, streaming via SSE (`session.text.delta` etc.), interrupt, slash commands — verified live end-to-end
+- [x] Connection status + graceful degraded states (health poll, offline drill pending in T10)
+- [x] Animated AI core (idle/thinking states, motion, reduced-motion fallback)
 
-**Acceptance:** send a real prompt, watch streamed response render, switch sessions, all against live server.
+**Spec:** `docs/SPEC-PHASE1.md` (architect). Commits: `1a180fc`, `62b530a`.
+**Remaining for Phase 1:** UI-designer visual pass → reviewer gate (incl. no-password-in-browser check) → Playwright visual inspection → T10 hardening drills.
+**API correction:** v2.2.0 SSE events are granular `session.*` types — see spec §4.
 
 ## Phase 2 — Telemetry: system + inference + tokens ☐
 

@@ -43,7 +43,10 @@ export interface NexusState {
   bootstrap(): Promise<void>
   setActiveSession(id: string | null): Promise<void>
   newSession(): Promise<void>
-  sendPrompt(text: string): Promise<void>
+  /** Resolves true when the prompt was accepted; false on failure (409 etc.)
+   *  so the composer can keep the text (§9). Deviates from the spec's
+   *  Promise<void> purely as a success signal — no other change. */
+  sendPrompt(text: string): Promise<boolean>
   sendSlashCommand(name: string, rest: string): Promise<void>
   interruptActive(): Promise<void>
   resync(): Promise<void>
@@ -293,7 +296,7 @@ export const useNexus = create<NexusState>()((set, get) => {
 
     async sendPrompt(text) {
       const sessionID = get().activeSessionId
-      if (!sessionID) return
+      if (!sessionID) return false
       const tempId = "tmp_" + crypto.randomUUID()
       const optimistic: ChatMessage = {
         id: tempId,
@@ -324,6 +327,7 @@ export const useNexus = create<NexusState>()((set, get) => {
               : msgs,
           },
         })
+        return true
       } catch (err) {
         // remove temp + toast
         const s = get()
@@ -336,6 +340,7 @@ export const useNexus = create<NexusState>()((set, get) => {
           },
         })
         handleApiError("prompt", err)
+        return false
       }
     },
 
@@ -382,9 +387,7 @@ export const useNexus = create<NexusState>()((set, get) => {
       ) {
         scheduleReconcile(next.pendingReconcile.sessionID)
       }
-      if (next.pendingRefetch.length > 0 && prev.pendingRefetch.length === 0) {
-        scheduleRefetch(next.pendingRefetch)
-      } else if (next.pendingRefetch.length > 0) {
+      if (next.pendingRefetch.length > 0) {
         scheduleRefetch(next.pendingRefetch)
       }
     },

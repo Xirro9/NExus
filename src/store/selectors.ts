@@ -25,10 +25,6 @@ export function useIsBusy(): boolean {
   )
 }
 
-export function useConnectionStatus(): NexusState["connection"] {
-  return useNexus((s: NexusState) => s.connection)
-}
-
 /** Status only — avoids re-rendering on version/url updates. */
 export function useStatus(): NexusState["connection"]["status"] {
   return useNexus((s: NexusState) => s.connection.status)

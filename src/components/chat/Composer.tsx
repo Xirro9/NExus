@@ -17,7 +17,8 @@ export function Composer({
 }: {
   disabled: boolean
   busy: boolean
-  onSend(text: string): void
+  /** May return a success signal (false = keep composer text, e.g. 409 busy). */
+  onSend(text: string): boolean | Promise<boolean>
   onInterrupt(): void
 }) {
   const [value, setValue] = useState("")
@@ -51,8 +52,11 @@ export function Composer({
       setValue("")
       return
     }
-    onSend(text)
-    setValue("")
+    // clear only on success — a rejected prompt (e.g. 409 busy) keeps the text
+    void Promise.resolve(onSend(text)).then((ok) => {
+      if (ok === false) return
+      setValue("")
+    })
   }
 
   return (

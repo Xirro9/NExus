@@ -58,7 +58,7 @@ export function ChatPanel() {
         <Composer
           disabled={false}
           busy={busy}
-          onSend={(text) => void sendPrompt(text)}
+          onSend={(text) => sendPrompt(text)}
           onInterrupt={() => void interruptActive()}
         />
       </div>

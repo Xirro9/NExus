@@ -14,7 +14,13 @@ function fmt(n: number): string {
 }
 
 function TokenBlock({ session }: { session: SessionInfo }) {
-  const t = session.tokens
+  // session payloads may lack tokens/cost (e.g. bare session.created)
+  const t = session.tokens ?? {
+    input: 0,
+    output: 0,
+    reasoning: 0,
+    cache: { read: 0, write: 0 },
+  }
   return (
     <div className="rounded-xl border border-border/70 bg-card p-3">
       <h3 className="mb-2.5 text-[11px] font-semibold tracking-wider text-muted-foreground uppercase">
@@ -23,26 +29,26 @@ function TokenBlock({ session }: { session: SessionInfo }) {
       <dl className="space-y-1 font-mono text-xs">
         <div className="flex justify-between">
           <dt className="text-muted-foreground">input</dt>
-          <dd>{fmt(t.input)}</dd>
+          <dd>{fmt(t.input ?? 0)}</dd>
         </div>
         <div className="flex justify-between">
           <dt className="text-muted-foreground">output</dt>
-          <dd>{fmt(t.output)}</dd>
+          <dd>{fmt(t.output ?? 0)}</dd>
         </div>
         <div className="flex justify-between">
           <dt className="text-muted-foreground">reasoning</dt>
-          <dd>{fmt(t.reasoning)}</dd>
+          <dd>{fmt(t.reasoning ?? 0)}</dd>
         </div>
         <div className="flex justify-between">
           <dt className="text-muted-foreground">cache r/w</dt>
           <dd>
-            {fmt(t.cache.read)} / {fmt(t.cache.write)}
+            {fmt(t.cache?.read ?? 0)} / {fmt(t.cache?.write ?? 0)}
           </dd>
         </div>
         <div className="flex justify-between border-t border-border/70 pt-1.5">
           <dt className="text-muted-foreground">cost</dt>
           <dd className="font-medium text-foreground">
-            ${session.cost.toFixed(4)}
+            ${(session.cost ?? 0).toFixed(4)}
           </dd>
         </div>
       </dl>
