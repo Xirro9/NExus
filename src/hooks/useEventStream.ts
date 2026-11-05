@@ -1,16 +1,18 @@
 // Mounts the SSE stream once, feeds events into the store, drives resync on
-// (re)connect per §4. EventSource auto-reconnects; we only track state.
+// (re)connect per §4. The transport auto-reconnects (EventSource in a browser,
+// the Rust pump in the Tauri shell); we only track state.
 
 import { useEffect, useRef } from "react"
 
-import { connectEvents, type StreamState } from "@/lib/opencode/sse"
+import { transport } from "@/lib/transport"
+import type { StreamState } from "@/lib/opencode/sse"
 import { useNexus } from "@/store/nexus"
 
 export function useEventStream(): void {
   const wasOpen = useRef(false)
 
   useEffect(() => {
-    const handle = connectEvents(
+    const handle = transport.connectEvents(
       (e) => useNexus.getState().applyEvent(e),
       (state: StreamState) => {
         const s = useNexus.getState()

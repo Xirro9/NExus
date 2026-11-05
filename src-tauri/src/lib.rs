@@ -1,5 +1,6 @@
 mod api;
 mod service;
+mod sse_pump;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -15,7 +16,11 @@ pub fn run() {
             Ok(())
         })
         .manage(reqwest::Client::new())
-        .invoke_handler(tauri::generate_handler![api::api_fetch])
+        .invoke_handler(tauri::generate_handler![
+            api::api_fetch,
+            sse_pump::event_stream_start,
+            sse_pump::event_stream_stop
+        ])
         .run(tauri::generate_context!())
         .expect("error while building tauri application");
 }
