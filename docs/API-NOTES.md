@@ -95,6 +95,32 @@ OpenCode exposes no host metrics. Real-data sources, local-first:
   chain must prefer llama `/props` nCtx for `providerID === "llamacpp"`**
   (SPEC-PHASE2 §4.1 step 1) and only fall back to the catalog for other providers.
 
+## Phase 3 findings (T20–T28, verified live 2026-11-05)
+
+- **`GET /api/session` query engine** — `?search=<term>` matches titles
+  server-side (live: 2 hits for "notes") and returns a real opaque cursor:
+  `{ previous, next }` base64 JSON anchors. `archived=false` (explicit) and
+  no-param return identical results; `archived=true` returns 0 (nothing
+  archived). `parentID="null"` returns roots only.
+- **⚠ `request()`-style unwrap vs cursor envelopes.** The shared `unwrap()`
+  helper strips the FIRST `.data` — so `{ location, data, cursor }` responses
+  lose the cursor if read after unwrapping. `listSessionsQuery` therefore
+  uses a `requestRaw` variant that skips unwrapping (client.ts). Any future
+  endpoint returning `data` + extra fields must do the same.
+- **Permissions listing scope (spec §12.5 open question) — UNRESOLVED with
+  fallback in place.** `GET /api/permission/request` (unscoped) verified live
+  → `{ location: { directory: "/home/mg-12623-8" }, data: [] }`. A live
+  pending-request drill was NOT performed (single-slot glm-server was busy
+  with the operator session; generating one would have starved it). Nexus
+  fetches unscoped; the `permission.asked` SSE marker triggers a refetch, and
+  the fallback design (fetch per known project directory + merge by `id`) is
+  documented in SPEC-PHASE3 §12.5 if unscoped listing ever proves incomplete.
+- **Worktree list requires the FULL Project.ID** — a truncated hash 404s with
+  `{"_tag":"ProjectNotFoundError"}`. Live projects return `[]` (no worktrees).
+- **Agent name casing** — `/api/agent` returns capitalized names ("Build",
+  "General") while session payloads carry lowercase agent ids ("build",
+  "reviewer"); mode resolution in the graph is case-insensitive.
+
 ## Gotchas
 
 - `GET /api/session` without `directory` returns sessions for server cwd.

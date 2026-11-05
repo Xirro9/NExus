@@ -57,9 +57,7 @@ export function SkillsPanel({ skills }: { skills: SkillInfo[] | null }) {
   return (
     <ul className="space-y-2">
       {skills.map((s) => (
-        <li key={s.id}>
-          <SkillRow skill={s} />
-        </li>
+        <SkillRow key={s.id} skill={s} />
       ))}
     </ul>
   )

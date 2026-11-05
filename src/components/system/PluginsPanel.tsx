@@ -80,9 +80,7 @@ export function PluginsPanel({ plugins }: { plugins: PluginInfo[] | null }) {
       </p>
       <ul className="space-y-1.5">
         {[...failed, ...active].map((p, i) => (
-          <li key={(p.id ?? "") + i}>
-            <PluginRow plugin={p} />
-          </li>
+          <PluginRow key={(p.id ?? "") + i} plugin={p} />
         ))}
       </ul>
     </div>

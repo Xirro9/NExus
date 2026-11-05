@@ -34,12 +34,14 @@ export interface AgentEdge {
 
 type AgentModes = Record<string, "primary" | "subagent" | "all">
 
-/** Resolve Agent.Info.mode with a safe fallback (build = primary). */
+/** Resolve Agent.Info.mode with a safe fallback (build = primary).
+ *  Keys are lowercased: /api/agent returns capitalized names ("Build") while
+ *  session payloads carry lowercase agent ids ("build", "reviewer"). */
 export function resolveModes(agents: { id: string; name: string; mode: string }[]): AgentModes {
   const modes: AgentModes = {}
   for (const a of agents) {
     if (a.mode === "primary" || a.mode === "subagent" || a.mode === "all") {
-      modes[a.name] = a.mode
+      modes[a.name.toLowerCase()] = a.mode
     }
   }
   return modes
@@ -73,7 +75,8 @@ export function buildGraph(
       id: s.id,
       parentId: s.parentID && scopeIds.has(s.parentID) ? s.parentID : null,
       agent: s.agent ?? "build",
-      agentMode: agentModes[s.agent ?? "build"] ?? "primary",
+      agentMode:
+        agentModes[(s.agent ?? "build").toLowerCase()] ?? "primary",
       title: s.title || "Untitled session",
       status,
       tokens: t

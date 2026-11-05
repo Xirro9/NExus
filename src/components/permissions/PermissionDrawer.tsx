@@ -38,11 +38,13 @@ export function PermissionDrawer({
     if (open) void useNexus.getState().refreshPermissions()
   }, [open])
 
-  // Esc closes + minimal focus trap
+  // Esc closes + minimal focus trap — document-level so Esc works even when
+  // focus is still on the opening button (rail badge / tab-row shield)
   useEffect(() => {
     if (!open) return
     const panel = panelRef.current
     if (!panel) return
+    panel.focus({ preventScroll: true })
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         e.stopPropagation()
@@ -67,8 +69,8 @@ export function PermissionDrawer({
         first.focus()
       }
     }
-    panel.addEventListener("keydown", onKey)
-    return () => panel.removeEventListener("keydown", onKey)
+    document.addEventListener("keydown", onKey, true)
+    return () => document.removeEventListener("keydown", onKey, true)
   }, [open, onClose])
 
   const reply = (requestID: string, sessionID: string) => (
@@ -98,6 +100,7 @@ export function PermissionDrawer({
             role="dialog"
             aria-modal="true"
             aria-label="Permission requests"
+            tabIndex={-1}
             initial={{ x: 440 }}
             animate={{ x: 0 }}
             exit={{ x: 440 }}

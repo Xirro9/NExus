@@ -54,7 +54,10 @@ function unwrap<T>(json: unknown): T {
   return json as T
 }
 
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
+/** Fetch + ApiError mapping, WITHOUT envelope unwrapping — for endpoints
+ *  whose response carries more than a single `data` field (e.g. /api/session
+ *  returns { location, data, cursor }). */
+async function requestRaw(path: string, init?: RequestInit): Promise<Response> {
   const res = await fetch(path, {
     ...init,
     headers: {
@@ -77,6 +80,11 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     }
     throw new ApiError(res.status, tag, message)
   }
+  return res
+}
+
+async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  const res = await requestRaw(path, init)
   if (res.status === 204) return undefined as T
   return unwrap<T>(await res.json())
 }
@@ -234,8 +242,9 @@ export const api = {
   // Phase 3 additions (SPEC-PHASE3 §3)
 
   /** Cursor-aware session query (Phase 1 listSessions stays as-is for the
-   *  sidebar). unwrap() gives { data, cursor }; map data → sessions. */
-  listSessionsQuery(q: SessionQuery): Promise<{
+   *  sidebar). Uses requestRaw: the envelope is { location, data, cursor }
+   *  and request()'s unwrap() would strip `.data` before we can read cursor. */
+  async listSessionsQuery(q: SessionQuery): Promise<{
     sessions: SessionInfo[]
     cursor: SessionCursor
   }> {
@@ -243,12 +252,18 @@ export const api = {
     for (const [k, v] of Object.entries(q)) {
       if (v !== undefined) params.set(k, v)
     }
-    return request<{ data: SessionInfo[]; cursor: SessionCursor }>(
-      `/api/session?${params.toString()}`,
-    ).then((res) => ({
-      sessions: Array.isArray(res.data) ? res.data : [],
-      cursor: res.cursor ?? { previous: null, next: null },
-    }))
+    const res = await requestRaw(`/api/session?${params.toString()}`)
+    const json = (await res.json()) as {
+      data?: unknown
+      cursor?: Partial<SessionCursor>
+    }
+    return {
+      sessions: Array.isArray(json.data) ? (json.data as SessionInfo[]) : [],
+      cursor: {
+        previous: json.cursor?.previous ?? null,
+        next: json.cursor?.next ?? null,
+      },
+    }
   },
 
   /** GET /api/permission/request — pending permission requests. */

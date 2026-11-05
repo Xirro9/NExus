@@ -317,3 +317,8 @@ export function useMemoryFiles(): {
   const entries = useWorkspace((s) => s.memory)
   return { files: MEMORY_FILES, entries }
 }
+
+// dev-only debug handle (browser-console verification, same as __nexus)
+if (import.meta.env.DEV) {
+  ;(window as unknown as Record<string, unknown>).__nexusWorkspace = useWorkspace
+}
