@@ -78,6 +78,7 @@ pub fn run() {
             Ok(())
         })
         .manage(client.clone())
+        .manage(sse_pump::StreamRegistry::default())
         .manage(telemetry::TelemetryState::spawn(client))
         .invoke_handler(tauri::generate_handler![
             api::api_fetch,

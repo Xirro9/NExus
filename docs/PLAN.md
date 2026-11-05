@@ -64,13 +64,19 @@ Goal: a working, beautiful chat client talking to the real OpenCode server.
 **Resolved:** `unwrap()` strips `{location,data,cursor}` envelopes — cursor-aware queries need a raw-request path (docs/API-NOTES.md).
 **Deferred:** live permission-request fire drill + offline-recovery drill (single-slot server busy with operator session — drill design in SPEC-PHASE3 §T21/T28); worktree mutations (Phase 4 at earliest); chat markdown rendering.
 
-## Phase 4 — Tauri desktop shell + polish ☐
+## Phase 4 — Tauri desktop shell + polish ◐ (code complete; gates pending)
 
-- [ ] Resolve system deps (`libwebkit2gtk-4.1-dev` etc.), wire real `tauri.conf.json` identity
-- [ ] Move telemetry + auth into Tauri commands (drop dev-proxy dependency)
-- [ ] Window chrome, tray, autostart of service if healthy
-- [ ] Motion polish pass, a11y audit, web-design-guidelines review
-- [ ] Full review + Playwright final visual pass
+- [x] Resolve system deps (`libwebkit2gtk-4.1-dev` etc. — installed by operator 2026-11-05), wire real `tauri.conf.json` identity — productName/title/brand **"Jerry"**, id `com.xirro9.jerry`, 1440×900 min 820×600, strict CSP, generated icon set (T29, `ae332ba`)
+- [x] Move telemetry + auth into Tauri commands — `Transport` seam (`src/lib/transport/`, detect via `"__TAURI_INTERNALS__"`), Rust `api_fetch` (auth injected, non-`/api` rejected), SSE pump over IPC `Channel` with Rust-side reconnect, telemetry loops ported 1:1 (T30–T32, `87c4898`..`3e19336`)
+- [x] Window chrome, tray, single-instance, window-state, close-to-tray (T33, `cb74cca`); "autostart of service" interpreted per spec §7 as check-at-launch only
+- [x] Chat markdown: assistant text via `renderMarkdown` (`.md-body.md-chat`), streaming fence-fixup, `target=_blank rel=noopener` links (T34, `f5c784e`)
+- [x] Live command verification: mock-runtime tests vs the real service — `api_fetch` roundtrip + path guard, SSE pump open→event→stop→no-reconnect (`35402fb`); telemetry shape-diff **42 leaf shapes identical** vs dev middleware; degrade matrices (llm retained-props/unreachable/recovery, gpu unavailable-no-retry) as `cargo test` harnesses
+- [x] Playwright visual pass on the **built** output (`vite preview`): full 6-tab tour, 0 console errors/warnings, degraded panels honest (preview has no telemetry middleware)
+- [x] `tauri dev` smoke: window boots under webkit, invoke path live (bootstrap + sessions via `api_fetch`), smoke caught missing `StreamRegistry` manage → fixed (`e0…` below)
+- [ ] Motion polish pass, a11y audit, web-design-guidelines review — **ui-designer pending**
+- [ ] Reviewer gate (security: password confinement, CSP, single-reply call-site, IPC surface) — **reviewer pending**
+- [ ] Packaged build (`npm run tauri build` → deb/AppImage) + manual desktop checklist (tray, geometry restore, second-instance, CSP console) — pending; identifier `com.xirro9.jerry` is final before first deb
+- [ ] T35 drills — **deferred with recorded cause** (docs/API-NOTES.md "Phase 4 drill results"): permission ask never fires under the operator's default config (no `permission` block → bash auto-allows); offline kill unsafe from inside the service (this session ran on it; two operator sessions live). Partial Rust coverage shipped instead.
 
 ---
 
