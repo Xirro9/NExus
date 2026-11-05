@@ -24,6 +24,7 @@ import type {
   SessionStatsInfo,
   SkillInfo,
   StatsParams,
+  TokenUsage,
   WorktreeDirectory,
 } from "./types"
 
@@ -89,9 +90,24 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return unwrap<T>(await res.json())
 }
 
+/** Normalize a raw per-message token payload (null while a step streams). */
+function toTokenUsage(raw: unknown): TokenUsage | undefined {
+  if (!raw || typeof raw !== "object") return undefined
+  const t = raw as Record<string, unknown>
+  const num = (v: unknown) => (typeof v === "number" && Number.isFinite(v) ? v : 0)
+  const cache = (t.cache ?? {}) as Record<string, unknown>
+  return {
+    input: num(t.input),
+    output: num(t.output),
+    reasoning: num(t.reasoning),
+    cache: { read: num(cache.read), write: num(cache.write) },
+  }
+}
+
 /** Map a raw server message (content: Part[]) to our ChatMessage 1:1. */
 function toChatMessage(raw: Record<string, unknown>): ChatMessage {
   const role = raw.type as MessageRole
+  const tokens = toTokenUsage(raw.tokens)
   const rawParts = Array.isArray(raw.content) ? raw.content : []
   const parts: MessagePart[] = []
   for (const p of rawParts) {
@@ -138,6 +154,7 @@ function toChatMessage(raw: Record<string, unknown>): ChatMessage {
     ...(typeof raw.agent === "string" ? { agent: raw.agent } : {}),
     ...(raw.model !== undefined ? { model: raw.model as ChatMessage["model"] } : {}),
     parts,
+    ...(tokens !== undefined ? { tokens } : {}),
     time: {
       created:
         typeof (raw.time as { created?: number } | undefined)?.created ===

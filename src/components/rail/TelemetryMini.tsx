@@ -1,11 +1,13 @@
 // Compact live telemetry block for the status rail (SPEC-PHASE2 §6): the rail
 // is the ambient always-watching surface — llama status + latency, CPU, RAM,
-// GPU util, and the active session's context bar. Reads only the telemetry
-// store (2 s poll, our own middleware) — never the OpenCode API.
+// GPU util, and the active session's context bar. Reads the telemetry store
+// (2 s poll, our own middleware) plus the nexus messages slice for the
+// context bar's per-message tokens — no OpenCode API calls here.
 
 import type { SessionInfo, TokenUsage } from "@/lib/opencode/types"
 import { useContextLimit } from "@/hooks/useContextLimit"
 import { useGpuSamples, useLlm, useSystemSamples, useTelemetry } from "@/store/telemetry"
+import { useCurrentContextTokens } from "@/store/selectors"
 import { ContextBar } from "@/components/dashboard/ContextBar"
 
 // token-less session payloads exist (bare session.created) — same guard as StatusRail
@@ -35,6 +37,11 @@ export function TelemetryMini({ session }: { session: SessionInfo | null }) {
   const systemOk = useTelemetry((s) => s.snapshot?.system.ok ?? false)
   const gpuOk = useTelemetry((s) => s.snapshot?.gpu.ok ?? false)
   const ctx = useContextLimit(session)
+  // measured current-context size from the latest assistant message; null →
+  // fall back to cumulative session.tokens and let ContextBar label it "est."
+  // (cumulative totals include cache.read, a per-step counter, so they are
+  // NOT the live window)
+  const measuredTokens = useCurrentContextTokens()
 
   const sys = systemSamples.length > 0 ? systemSamples[systemSamples.length - 1]! : null
   const gpu = gpuSamples.length > 0 ? gpuSamples[gpuSamples.length - 1]! : null
@@ -102,7 +109,11 @@ export function TelemetryMini({ session }: { session: SessionInfo | null }) {
             ctx {ctx.limit !== null ? ctx.limit.toLocaleString() : "unknown"}
             {ctx.stale ? " · stale" : ""}
           </div>
-          <ContextBar tokens={session.tokens ?? EMPTY_TOKENS} ctxLimit={ctx.limit} />
+          <ContextBar
+            tokens={measuredTokens ?? session.tokens ?? EMPTY_TOKENS}
+            ctxLimit={ctx.limit}
+            estimate={measuredTokens === null}
+          />
         </div>
       )}
       {!llm && (

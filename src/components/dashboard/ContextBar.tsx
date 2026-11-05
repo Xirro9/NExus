@@ -4,6 +4,8 @@
 //    ≥80% warning / ≥95% destructive + compaction hint
 //  - relative mode (relative): no limit known — proportional widths (usage panel)
 //  - ctxLimit null & !relative: honest dashed "unknown" state — never guessed
+// estimate: the value is a cumulative fallback, not a measured current-context
+// size — label it "est." and never raise the warning/critical tones.
 
 import { fmtTokens } from "@/lib/format"
 import type { TokenUsage } from "@/lib/opencode/types"
@@ -12,6 +14,7 @@ export interface ContextBarProps {
   tokens: TokenUsage
   ctxLimit: number | null
   relative?: boolean
+  estimate?: boolean
 }
 
 const SEGMENTS: { label: string; color: string }[] = [
@@ -32,12 +35,20 @@ function tokenParts(t: TokenUsage): number[] {
   ]
 }
 
-export function ContextBar({ tokens, ctxLimit, relative }: ContextBarProps) {
+export function ContextBar({ tokens, ctxLimit, relative, estimate }: ContextBarProps) {
   const parts = tokenParts(tokens)
   const used = parts.reduce((a, b) => a + b, 0)
   const pct = ctxLimit && ctxLimit > 0 ? (used / ctxLimit) * 100 : null
   const unknown = !relative && ctxLimit === null
-  const tone = pct !== null && pct >= 95 ? "destructive" : pct !== null && pct >= 80 ? "warning" : null
+  // an estimated (cumulative) value can legitimately exceed the window without
+  // meaning anything — tones are only for measured current-context sizes
+  const tone = estimate
+    ? null
+    : pct !== null && pct >= 95
+      ? "destructive"
+      : pct !== null && pct >= 80
+        ? "warning"
+        : null
 
   // absolute-positioned segments with cumulative left offsets (computed up
   // front — no mutable bindings captured in JSX)
@@ -66,7 +77,7 @@ export function ContextBar({ tokens, ctxLimit, relative }: ContextBarProps) {
         role="img"
         aria-label={
           pct !== null
-            ? `context footprint ${pct.toFixed(1)}% of limit`
+            ? `context footprint ${estimate ? "estimated " : ""}${pct.toFixed(1)}% of limit`
             : `context footprint ${used} tokens, limit unknown`
         }
         className={
@@ -109,7 +120,7 @@ export function ContextBar({ tokens, ctxLimit, relative }: ContextBarProps) {
           }
         >
           {pct !== null
-            ? `${pct.toFixed(1)}% of ${fmtTokens(ctxLimit!)} ctx`
+            ? `${estimate ? "est. " : ""}${pct.toFixed(1)}% of ${fmtTokens(ctxLimit!)} ctx`
             : relative
               ? `${fmtTokens(used)} tok`
               : "ctx unknown"}

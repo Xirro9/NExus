@@ -82,6 +82,8 @@ export interface ChatMessage {
   model?: ModelRef
   parts: MessagePart[]
   streaming?: boolean // true while assistant deltas are arriving
+  /** per-message token counts (assistant messages; null until the step completes) */
+  tokens?: TokenUsage
   time: { created: number }
 }
 
