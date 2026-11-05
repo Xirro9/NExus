@@ -57,6 +57,11 @@
 
 /* Nexus is dark-only in Phase 1 — the app IS dark (no .dark toggle). */
 :root {
+    /* native form controls (select popup lists, their scrollbars, UA widgets)
+       must render dark: without color-scheme WebKitGTK draws them with the
+       light UA scheme → white popup behind near-white option text */
+    color-scheme: dark;
+
     /* surfaces — deep-space navy, cool hue 265 */
     --background:           oklch(0.145 0.018 265);
     --foreground:           oklch(0.93  0.012 250);
@@ -128,6 +133,14 @@
     outline: 2px solid var(--ring);
     outline-offset: 2px;
     }
+
+  /* native <select> popup list: some WebKitGTK builds ignore color-scheme
+     for the option list itself — paint options from the popover tokens */
+  select option,
+  select optgroup {
+    background-color: var(--popover);
+    color: var(--popover-foreground);
+  }
 
   /* themed browser surfaces — selection, caret, scrollbars, numerals */
   ::selection {
