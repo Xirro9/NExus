@@ -9,13 +9,21 @@ import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxi
 import { MessageSquare } from "lucide-react"
 
 import { api } from "@/lib/opencode/client"
-import type { ContextMessage } from "@/lib/opencode/types"
+import type { ContextMessage, TokenUsage } from "@/lib/opencode/types"
 import { useActiveSession } from "@/store/selectors"
 import { useNexus } from "@/store/nexus"
 import { useContextLimit } from "@/hooks/useContextLimit"
 import { AXIS_TICK, ChartTooltip, CURSOR_RECT, GRID, useAnimateOnce } from "./chart-utils"
 import { ContextBar } from "./ContextBar"
 import { PanelCard } from "./PanelCard"
+
+// token-less session payloads exist (bare session.created) — same guard as StatusRail
+const EMPTY_TOKENS: TokenUsage = {
+  input: 0,
+  output: 0,
+  reasoning: 0,
+  cache: { read: 0, write: 0 },
+}
 
 export function ContextPanel({ visible }: { visible: boolean }) {
   const session = useActiveSession()
@@ -88,7 +96,7 @@ export function ContextPanel({ visible }: { visible: boolean }) {
       ) : (
         <div className="space-y-3">
           <div>
-            <ContextBar tokens={session.tokens} ctxLimit={ctx.limit} />
+            <ContextBar tokens={session.tokens ?? EMPTY_TOKENS} ctxLimit={ctx.limit} />
             <p className="mt-1.5 font-mono text-[10px] leading-relaxed text-muted-foreground">
               footprint = sum of reported token classes, cumulative since session
               start; providers attribute cache differently — treat as an estimate.

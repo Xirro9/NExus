@@ -41,6 +41,7 @@ Ground truth verified 2026-11-04 against the live llama-server, nvidia-smi on th
 
 Rationale:
 - The browser never needs raw llama-server access — the middleware fetches `/health` + `/props` server-side (no CORS questions, more accurate latency measurement, and the container IP never leaks into the client).
+  *(Correction, review gate 2026-11-05: the llama URL does appear in the snapshot — `llm.url` per §2.6, rendered in LlmPanel. It is resolved server-side by the dev-only middleware and is a localhost/container address, so this is acceptable; the client still never talks to llama directly.)*
 - One clean seam for Phase 4: the client contract is `fetch("/telemetry/snapshot")` → becomes `invoke("telemetry_snapshot")` in Tauri. The client never knows the difference (same rule that made Phase 1 auth swappable).
 - A `/llm` passthrough would only duplicate what the middleware already does; nothing in Phases 2–4 needs a raw llama proxy.
 - **The middleware makes ZERO calls to the OpenCode API** — no auth coupling, no extra load on the service (see §9, single-slot rule).

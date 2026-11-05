@@ -3,10 +3,18 @@
 // GPU util, and the active session's context bar. Reads only the telemetry
 // store (2 s poll, our own middleware) — never the OpenCode API.
 
-import type { SessionInfo } from "@/lib/opencode/types"
+import type { SessionInfo, TokenUsage } from "@/lib/opencode/types"
 import { useContextLimit } from "@/hooks/useContextLimit"
 import { useGpuSamples, useLlm, useSystemSamples, useTelemetry } from "@/store/telemetry"
 import { ContextBar } from "@/components/dashboard/ContextBar"
+
+// token-less session payloads exist (bare session.created) — same guard as StatusRail
+const EMPTY_TOKENS: TokenUsage = {
+  input: 0,
+  output: 0,
+  reasoning: 0,
+  cache: { read: 0, write: 0 },
+}
 
 const DOT_COLORS = {
   ok: "var(--success)",
@@ -94,7 +102,7 @@ export function TelemetryMini({ session }: { session: SessionInfo | null }) {
             ctx {ctx.limit !== null ? ctx.limit.toLocaleString() : "unknown"}
             {ctx.stale ? " · stale" : ""}
           </div>
-          <ContextBar tokens={session.tokens} ctxLimit={ctx.limit} />
+          <ContextBar tokens={session.tokens ?? EMPTY_TOKENS} ctxLimit={ctx.limit} />
         </div>
       )}
       {!llm && (

@@ -58,18 +58,20 @@ export function UsagePanel({ visible }: { visible: boolean }) {
   }, [visible, fetchStats])
 
   // activity: zero-fill days across range.from/to so sparse data reads
-  // honestly instead of looking full (§5.4); capped defensively
+  // honestly instead of looking full (§5.4); capped defensively.
+  // activity[].date is a UTC calendar day — day keys must use UTC getters or a
+  // real activity day renders as zero in non-UTC timezones
   const activityRows = useMemo(() => {
     if (!stats) return []
     const byDate = new Map(stats.activity.map((a) => [a.date, a.steps]))
     const rows: { date: string; steps: number }[] = []
     const cursor = new Date(stats.range.from)
-    cursor.setHours(0, 0, 0, 0)
+    cursor.setUTCHours(0, 0, 0, 0)
     const end = new Date(stats.range.to)
     while (cursor.getTime() <= end.getTime() && rows.length < 400) {
-      const key = `${cursor.getFullYear()}-${String(cursor.getMonth() + 1).padStart(2, "0")}-${String(cursor.getDate()).padStart(2, "0")}`
+      const key = `${cursor.getUTCFullYear()}-${String(cursor.getUTCMonth() + 1).padStart(2, "0")}-${String(cursor.getUTCDate()).padStart(2, "0")}`
       rows.push({ date: key, steps: byDate.get(key) ?? 0 })
-      cursor.setDate(cursor.getDate() + 1)
+      cursor.setUTCDate(cursor.getUTCDate() + 1)
     }
     return rows
   }, [stats])
