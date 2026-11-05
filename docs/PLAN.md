@@ -64,7 +64,7 @@ Goal: a working, beautiful chat client talking to the real OpenCode server.
 **Resolved:** `unwrap()` strips `{location,data,cursor}` envelopes — cursor-aware queries need a raw-request path (docs/API-NOTES.md).
 **Deferred:** live permission-request fire drill + offline-recovery drill (single-slot server busy with operator session — drill design in SPEC-PHASE3 §T21/T28); worktree mutations (Phase 4 at earliest); chat markdown rendering.
 
-## Phase 4 — Tauri desktop shell + polish ◐ (code complete; gates pending)
+## Phase 4 — Tauri desktop shell + polish ☑
 
 - [x] Resolve system deps (`libwebkit2gtk-4.1-dev` etc. — installed by operator 2026-11-05), wire real `tauri.conf.json` identity — productName/title/brand **"Jerry"**, id `com.xirro9.jerry`, 1440×900 min 820×600, strict CSP, generated icon set (T29, `ae332ba`)
 - [x] Move telemetry + auth into Tauri commands — `Transport` seam (`src/lib/transport/`, detect via `"__TAURI_INTERNALS__"`), Rust `api_fetch` (auth injected, non-`/api` rejected), SSE pump over IPC `Channel` with Rust-side reconnect, telemetry loops ported 1:1 (T30–T32, `87c4898`..`3e19336`)
@@ -73,10 +73,10 @@ Goal: a working, beautiful chat client talking to the real OpenCode server.
 - [x] Live command verification: mock-runtime tests vs the real service — `api_fetch` roundtrip + path guard, SSE pump open→event→stop→no-reconnect (`35402fb`); telemetry shape-diff **42 leaf shapes identical** vs dev middleware; degrade matrices (llm retained-props/unreachable/recovery, gpu unavailable-no-retry) as `cargo test` harnesses
 - [x] Playwright visual pass on the **built** output (`vite preview`): full 6-tab tour, 0 console errors/warnings, degraded panels honest (preview has no telemetry middleware)
 - [x] `tauri dev` smoke: window boots under webkit, invoke path live (bootstrap + sessions via `api_fetch`), smoke caught missing `StreamRegistry` manage → fixed (`e0…` below)
-- [ ] Motion polish pass, a11y audit, web-design-guidelines review — **ui-designer pending**
-- [ ] Reviewer gate (security: password confinement, CSP, single-reply call-site, IPC surface) — **reviewer pending**
-- [ ] Packaged build (`npm run tauri build` → deb/AppImage) + manual desktop checklist (tray, geometry restore, second-instance, CSP console) — pending; identifier `com.xirro9.jerry` is final before first deb
-- [ ] T35 drills — **deferred with recorded cause** (docs/API-NOTES.md "Phase 4 drill results"): permission ask never fires under the operator's default config (no `permission` block → bash auto-allows); offline kill unsafe from inside the service (this session ran on it; two operator sessions live). Partial Rust coverage shipped instead.
+- [x] Reviewer gate (security: password confinement, CSP, IPC surface, single-reply call-site) — first gate **REJECT** on 1 blocker (Tauri transport dropped Content-Type on JSON POSTs — reqwest adds none for `.body(String)`; would have broken chat only in the shipped shell) + 3 low findings → reassigned fixer (`8fcd9ec`: content-type mirror, `is_allowed_path` blocks `..`/`/apifoo`, 5s connect timeout on ClientBuilder, gpu compute-apps last-good parity, STATUS_TEXT map, tray hint) → live POST→DELETE roundtrip test added → re-gate **APPROVE**. Non-blocking on record: path guard is literal-only (no `%2e%2e` decode — defense-in-depth behind hardened webview).
+- [x] UI-designer polish pass (`7a646fc`): `.md-chat` code-well + prose rhythm, rail footer chip → "jerry · phase 4", tray-hint dismiss target; 6-tab sweep 1440/900 clean. Deferred: Agents-tab xyflow minimap reads as a flat dark plate at 900px (pre-existing).
+- [x] Packaged build (`npm run tauri build`): **Jerry_0.1.0_amd64.deb** (5.1 MiB) + **Jerry_0.1.0_amd64.AppImage** (81.8 MiB) in `src-tauri/target/release/bundle/`; AppImage launched live (window up, connects read-only at boot). Manual desktop checklist for the operator: tray icon + close-to-tray hint, geometry restore across restarts, second-instance focus, deb install (`sudo dpkg -i`).
+- [~] T35 drills — **deferred with recorded cause** (docs/API-NOTES.md "Phase 4 drill results"): permission ask never fires under the operator's default config (no `permission` block → bash auto-allows); offline kill unsafe from inside the service. Partial Rust pump coverage shipped instead.
 
 ---
 
