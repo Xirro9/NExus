@@ -48,7 +48,7 @@ Goal: a working, beautiful chat client talking to the real OpenCode server.
 **Verified live:** snapshot numbers vs top/free/nvidia-smi/curl; nCtx 1048576 from /props; degrade drills (llama unreachable → retained model + propsStaleMs → one-probe recovery); view switching preserves chat; mainView persisted; reduced-motion; zero console errors/warnings.
 **Optional follow-up:** restart glm-server container with `--metrics` for real KV-cache/prompt metrics.
 
-## Phase 3 — Agents, sessions, projects, memory ◐
+## Phase 3 — Agents, sessions, projects, memory ☑
 
 - [x] Agent/subagent activity visualization (xyflow live graph: pure projection of sessions+busy+active-map, 5 s reconcile poll while Agents visible) (T25)
 - [x] Session history browser (server-side search/project/archived filters, cursor pagination) (T23)
@@ -59,10 +59,10 @@ Goal: a working, beautiful chat client talking to the real OpenCode server.
 - [x] Phase 1 leftover basket: sidebar child sessions, synthetic message dividers (T24)
 
 **Spec:** `docs/SPEC-PHASE3.md` (tasks T20–T28).
-**Pipeline executed:** architect spec → developer T20–T28 → reviewer gate pending.
-**Verified live:** graph renders 39 nodes/16 edges with real subagent spawns + live "running" state; history search/filter/pagination vs curl; drawer opens from rail + shield, Esc closes, empty state; all 5 memory files render; skills 7 / plugins 92 / MCP 2 match live GETs; worktree empty state honest; xyflow isolated in a 169 KB (53 KB gzip) lazy chunk; 0 console errors on a full tab tour.
+**Pipeline executed:** architect spec → developer T20–T28 (`660a36f..2faa342`) → reviewer gate **APPROVE** (0 blockers; permission hard rules + fs whitelist + XSS audits pass) → review fixes (`d9339f5`: drawer focus, history double-fetch, generation guard, layering) → ui-designer polish (`d7d8978`: themed xyflow, busy-edge styling, prose cap, drawer blur) → Playwright inspection (agents graph real-time, System panels, 0 console errors) → coordinator-caught data-honesty fix (`af8392b`: rail ctx bar now reads CURRENT context via latest assistant per-message tokens, cumulative fallback labeled "est.") → targeted re-review **APPROVE**.
+**Verified live:** graph renders 41 nodes/18 edges with real subagent spawns + live "running" state; history search/filter/pagination vs curl; drawer opens from rail + shield, Esc closes, empty state; all 5 memory files render; skills 7 / plugins 92 / MCP 2 match live GETs; worktree empty state honest; xyflow isolated in a 169 KB (53 KB gzip) lazy chunk; 0 console errors on a full tab tour; build+lint green at close.
 **Resolved:** `unwrap()` strips `{location,data,cursor}` envelopes — cursor-aware queries need a raw-request path (docs/API-NOTES.md).
-**Deferred:** live permission-request fire drill (single-slot server busy with operator session — drill design in SPEC-PHASE3 §T21/T28); offline-recovery drill against the shared service; reviewer gate.
+**Deferred:** live permission-request fire drill + offline-recovery drill (single-slot server busy with operator session — drill design in SPEC-PHASE3 §T21/T28); worktree mutations (Phase 4 at earliest); chat markdown rendering.
 
 ## Phase 4 — Tauri desktop shell + polish ☐
 
