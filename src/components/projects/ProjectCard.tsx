@@ -5,8 +5,8 @@
 import { useState } from "react"
 import { ChevronDown, ChevronRight, ExternalLink } from "lucide-react"
 
-import { api } from "@/lib/opencode/client"
 import { useNexus } from "@/store/nexus"
+import { useWorkspace } from "@/store/workspace"
 import type { ProjectInfo, SessionInfo } from "@/lib/opencode/types"
 
 import { WorktreeList } from "./WorktreeList"
@@ -37,20 +37,15 @@ export function ProjectCard({
       s.sessionOrder.filter((id) => s.sessions[id]?.projectID === project.id)
         .length,
   )
+  const loadRecentSessions = useWorkspace((s) => s.loadRecentSessions)
 
   const toggle = () => {
     const next = !open
     setOpen(next)
     // lazily fetch recent ROOT sessions on first expand (single-slot budget)
     if (next && recent === null && !recentError) {
-      api
-        .listSessionsQuery({
-          project: project.id,
-          parentID: "null",
-          limit: "10",
-          order: "desc",
-        })
-        .then((res) => setRecent(res.sessions))
+      loadRecentSessions(project.id)
+        .then((sessions) => setRecent(sessions))
         .catch((err) =>
           setRecentError(err instanceof Error ? err.message : String(err)),
         )

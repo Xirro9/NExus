@@ -29,7 +29,9 @@ export function HistoryView({
   const loadMoreHistory = useWorkspace((s) => s.loadMoreHistory)
   const results = useHistoryResults()
 
-  // local input + 400 ms debounce → searchHistory
+  // local input + 400 ms debounce → searchHistory. The debounce effect is the
+  // ONLY fetcher on mount/input (single GET, review fix 2); the filter effect
+  // skips its first run to avoid double-fetching.
   const [input, setInput] = useState(historyQuery)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   useEffect(() => {
@@ -40,8 +42,13 @@ export function HistoryView({
       if (debounceRef.current) clearTimeout(debounceRef.current)
     }
   }, [input, searchHistory])
-  // initial fetch + refetch when filters change (skip the input debounce path)
+  // refetch when filters change (not on mount — the debounce effect covers it)
+  const filtersMounted = useRef(false)
   useEffect(() => {
+    if (!filtersMounted.current) {
+      filtersMounted.current = true
+      return
+    }
     void searchHistory()
   }, [historyProjectId, historyArchived, searchHistory])
 

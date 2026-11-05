@@ -69,6 +69,10 @@ export const MEMORY_FILES: {
 const EMPTY_HISTORY: SessionInfo[] = []
 const EMPTY_WORKTREES: WorktreeDirectory[] = []
 
+/** Generation guard for history queries (same pattern as nexus.resync):
+ *  out-of-order responses must not overwrite newer results/cursor. */
+let historyGen = 0
+
 export interface WorkspaceState {
   // history browser (server-side query; §6)
   historyQuery: string
@@ -97,6 +101,9 @@ export interface WorkspaceState {
   worktreeStatus: Record<string, "idle" | "loading" | "error">
   loadWorktrees(projectID: string): Promise<void>
   refreshWorktrees(projectID: string): Promise<void>
+  /** Recent ROOT sessions for a project (Projects-card expand). No caching —
+   *  the card owns its expanded state. Keeps api out of the component. */
+  loadRecentSessions(projectID: string): Promise<SessionInfo[]>
 
   // system / extensions
   skills: SkillInfo[] | null
@@ -132,6 +139,7 @@ export const useWorkspace = create<WorkspaceState>()((set, get) => ({
     const query = opts?.query ?? get().historyQuery
     const projectId = opts?.projectId ?? get().historyProjectId
     const archived = opts?.archived ?? get().historyArchived
+    const gen = ++historyGen
     set({
       historyQuery: query,
       historyProjectId: projectId,
@@ -147,12 +155,14 @@ export const useWorkspace = create<WorkspaceState>()((set, get) => ({
         limit: "50",
         order: "desc",
       })
+      if (gen !== historyGen) return // superseded — never overwrite newer results
       set({
         historyResults: res.sessions,
         historyCursor: res.cursor,
         historyLoading: false,
       })
     } catch (err) {
+      if (gen !== historyGen) return
       set({
         historyLoading: false,
         historyError: err instanceof Error ? err.message : String(err),
@@ -164,6 +174,7 @@ export const useWorkspace = create<WorkspaceState>()((set, get) => ({
     const { historyCursor, historyLoading } = get()
     const next = historyCursor?.next
     if (!next || historyLoading) return
+    const gen = ++historyGen
     set({ historyLoading: true })
     try {
       const res = await api.listSessionsQuery({
@@ -176,6 +187,7 @@ export const useWorkspace = create<WorkspaceState>()((set, get) => ({
         order: "desc",
         cursor: next, // opaque — pass through verbatim, never inspected (§12.6)
       })
+      if (gen !== historyGen) return
       set({
         // append; guard duplicates defensively (cursor overlap)
         historyResults: [
@@ -188,6 +200,7 @@ export const useWorkspace = create<WorkspaceState>()((set, get) => ({
         historyLoading: false,
       })
     } catch (err) {
+      if (gen !== historyGen) return
       set({
         historyLoading: false,
         historyError: err instanceof Error ? err.message : String(err),
@@ -242,6 +255,16 @@ export const useWorkspace = create<WorkspaceState>()((set, get) => ({
     } catch {
       set({ worktreeStatus: { ...get().worktreeStatus, [projectID]: "error" } })
     }
+  },
+
+  async loadRecentSessions(projectID) {
+    const res = await api.listSessionsQuery({
+      project: projectID,
+      parentID: "null",
+      limit: "10",
+      order: "desc",
+    })
+    return res.sessions
   },
 
   skills: null,

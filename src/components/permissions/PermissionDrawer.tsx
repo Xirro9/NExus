@@ -39,12 +39,15 @@ export function PermissionDrawer({
   }, [open])
 
   // Esc closes + minimal focus trap — document-level so Esc works even when
-  // focus is still on the opening button (rail badge / tab-row shield)
+  // focus is still on the opening button (rail badge / tab-row shield).
+  // Panel focus only when the list is empty: with requests present the cards'
+  // mount effects own focus (Reject first); re-running on length change keeps
+  // that true after the initial refreshPermissions() populates the list.
   useEffect(() => {
     if (!open) return
     const panel = panelRef.current
     if (!panel) return
-    panel.focus({ preventScroll: true })
+    if (requests.length === 0) panel.focus({ preventScroll: true })
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         e.stopPropagation()
@@ -71,7 +74,7 @@ export function PermissionDrawer({
     }
     document.addEventListener("keydown", onKey, true)
     return () => document.removeEventListener("keydown", onKey, true)
-  }, [open, onClose])
+  }, [open, onClose, requests.length])
 
   const reply = (requestID: string, sessionID: string) => (
     decision: PermissionReply,
