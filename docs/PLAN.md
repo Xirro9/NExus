@@ -16,7 +16,7 @@ installation. Local-first, open-source, real telemetry only.
 - [x] Identify host-telemetry gap → local providers (/proc, nvidia-smi, llama-server /health)
 - [x] Write `docs/API-NOTES.md`
 
-## Phase 1 — Foundation: connection, shell, live chat ◐
+## Phase 1 — Foundation: connection, shell, live chat ☑
 
 Goal: a working, beautiful chat client talking to the real OpenCode server.
 
@@ -25,12 +25,13 @@ Goal: a working, beautiful chat client talking to the real OpenCode server.
 - [x] Design system: dark futuristic tokens, Geist Variable typography, readability-first contrast (spec §6 verbatim)
 - [x] App shell: sidebar (sessions/projects) + main area + status rail; responsive
 - [x] Live chat: session list, new session, prompt send, streaming via SSE (`session.text.delta` etc.), interrupt, slash commands — verified live end-to-end
-- [x] Connection status + graceful degraded states (health poll, offline drill pending in T10)
+- [x] Connection status + graceful degraded states (health poll, offline dimming, 401/409 toasts)
 - [x] Animated AI core (idle/thinking states, motion, reduced-motion fallback)
 
-**Spec:** `docs/SPEC-PHASE1.md` (architect). Commits: `1a180fc`, `62b530a`.
-**Remaining for Phase 1:** UI-designer visual pass → reviewer gate (incl. no-password-in-browser check) → Playwright visual inspection → T10 hardening drills.
-**API correction:** v2.2.0 SSE events are granular `session.*` types — see spec §4.
+**Spec:** `docs/SPEC-PHASE1.md` (architect; corrected v2.2.0 SSE event types — granular `session.*`, not `message.updated`).
+**Pipeline executed:** architect spec → developer T1–T9 (`1a180fc`, `62b530a`) → ui-designer polish (`a0d7e81`) → reviewer gate **APPROVE** (security clean: password only in proxy process) → review fixes (`b30186f`) → Playwright visual inspection.
+**Verified live:** streamed reply, slash command w/ tool part, interrupt mid-stream, session switching, real token/cost telemetry, reducer 11/11 vs captured event log, responsive @1680/1100/820px, reduced-motion.
+**Queued polish (non-blocking, for T10/Phase 2):** style synthetic messages (`[idle]`, `[/command]`, `[system]`) as subtle labeled dividers instead of raw bracket text; strict FIFO tmp-id→delivered matching; T10 offline + rapid-switch drills.
 
 ## Phase 2 — Telemetry: system + inference + tokens ☐
 
