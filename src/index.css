@@ -297,6 +297,35 @@
 .md-body th { background: var(--muted); font-weight: 600; }
 .md-body img { max-width: 100%; border-radius: 0.5rem; }
 
+/* ---------------------------------------------------------------------------
+ * Chat-scoped markdown (SPEC-PHASE4 §8) — assistant text parts only.
+ * Tighter than .md-body: chat bubbles are dense; headings capped at 16px;
+ * code blocks reuse the existing mono/--card bubble styling. Reasoning,
+ * user messages, and tool parts never pass through here.
+ * ------------------------------------------------------------------------- */
+.md-chat {
+  font-size: 0.875rem;
+  line-height: 1.6;
+}
+.md-chat > :first-child { margin-top: 0; }
+.md-chat > :last-child { margin-bottom: 0; }
+.md-chat h1, .md-chat h2, .md-chat h3,
+.md-chat h4, .md-chat h5, .md-chat h6 {
+  font-size: 1rem; /* capped at 16px — headings must not shout in a bubble */
+  margin: 0.9em 0 0.4em;
+}
+.md-chat h1:first-child, .md-chat h2:first-child,
+.md-chat h3:first-child, .md-chat h4:first-child { margin-top: 0; }
+.md-chat p { margin: 0.45em 0; }
+.md-chat ul, .md-chat ol { margin: 0.45em 0; padding-left: 1.3em; }
+.md-chat pre {
+  margin: 0.6em 0;
+  border-radius: 0.5rem;
+  font-size: 0.8rem;
+}
+.md-chat code { font-size: 0.8em; }
+.md-chat blockquote { margin: 0.5em 0; }
+
 /* xyflow overrides scoped to match the Nexus tokens (SPEC-PHASE3 §10) */
 .react-flow {
   --xy-background-color: transparent;

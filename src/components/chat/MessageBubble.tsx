@@ -1,54 +1,40 @@
 // Message dispatch: user card / assistant card with ordered parts / centered
-// divider for synthetic roles (SPEC-PHASE3 §9.2). No markdown library in chat
-// (deferred) — fenced code via a trivial triple-backtick splitter (§8).
+// divider for synthetic roles (SPEC-PHASE3 §9.2). Assistant TEXT parts render
+// markdown (SPEC-PHASE4 §8); reasoning stays plain dim italic, user input
+// stays literal whitespace-pre-wrap, tool parts stay ToolPartCard.
 
+import { renderMarkdown } from "@/lib/markdown"
 import type { ChatMessage, MessagePart, TextPart } from "@/lib/opencode/types"
 import { ReasoningBlock } from "./ReasoningBlock"
 import { ToolPartCard } from "./ToolPartCard"
 
-/** Split text into plain and fenced-code chunks. */
-function splitFences(text: string): { code: boolean; content: string }[] {
-  const chunks: { code: boolean; content: string }[] = []
-  const re = /```[^\n]*\n?/g
-  let last = 0
-  let match: RegExpExecArray | null
-  let inCode = false
-  while ((match = re.exec(text)) !== null) {
-    if (match.index > last) {
-      chunks.push({ code: inCode, content: text.slice(last, match.index) })
-    }
-    inCode = !inCode
-    last = match.index + match[0].length
-  }
-  if (last < text.length) chunks.push({ code: inCode, content: text.slice(last) })
-  return chunks
+/**
+ * Streaming fence-fixup (§8): while `message.streaming`, count ``` occurrences
+ * in the partial text; if odd, append a closing fence to the RENDER SOURCE
+ * ONLY (never to the store) so a half-fenced code block doesn't jump layouts.
+ */
+function renderSource(text: string, streaming: boolean): string {
+  if (!streaming) return text
+  const fenceCount = (text.match(/```/g) ?? []).length
+  return fenceCount % 2 === 1 ? `${text}\n\n\`\`\`` : text
 }
 
 function TextBody({
   text,
   cursor,
+  streaming,
 }: {
   text: string
   cursor: boolean
+  streaming: boolean
 }) {
-  const chunks = splitFences(text)
   return (
-    <div className={cursor ? "nexus-cursor" : undefined}>
-      {chunks.map((chunk, i) =>
-        chunk.code ? (
-          <pre
-            key={i}
-            className="my-2 overflow-x-auto rounded-lg border border-border/70 bg-muted/70 p-3 font-mono text-xs leading-relaxed"
-          >
-            {chunk.content.replace(/\n$/, "")}
-          </pre>
-        ) : (
-          <span key={i} className="whitespace-pre-wrap">
-            {chunk.content}
-          </span>
-        ),
-      )}
-    </div>
+    <div
+      className={`md-body md-chat${cursor ? " nexus-cursor" : ""}`}
+      // renderMarkdown escapes raw HTML (html:false) and validates links —
+      // see src/lib/markdown.ts for the security contract
+      dangerouslySetInnerHTML={{ __html: renderMarkdown(renderSource(text, streaming)) }}
+    />
   )
 }
 
@@ -73,7 +59,7 @@ function AssistantParts({
         if (part.type === "tool") {
           return <ToolPartCard key={part.id || i} part={part} />
         }
-        return <TextBody key={i} text={part.text} cursor={cursor} />
+        return <TextBody key={i} text={part.text} cursor={cursor} streaming={streaming} />
       })}
     </div>
   )

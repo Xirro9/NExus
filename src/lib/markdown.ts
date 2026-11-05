@@ -1,6 +1,5 @@
-// Markdown → HTML for the read-only System/memory viewers (SPEC-PHASE3 §8.2).
-// Scope: memory viewer + skill-content expander ONLY — chat markdown stays
-// deferred (Phase 1 decision stands).
+// Markdown → HTML for the read-only System/memory viewers (SPEC-PHASE3 §8.2)
+// and, since Phase 4, assistant chat text parts (SPEC-PHASE4 §8).
 //
 // Security: html:false escapes every raw HTML tag in the source; markdown-it's
 // default validateLink blocks javascript:/data: URLs. Safe by default with no
@@ -14,6 +13,17 @@ const md = new MarkdownIt({
   linkify: true,
   breaks: false,
 })
+
+// Webview has no tab UI — open links externally-capable and drop opener
+// access (SPEC-PHASE4 §8). Applies to both chat and the System viewers.
+const defaultLinkRender =
+  md.renderer.rules.link_open ??
+  ((tokens, idx, options, _env, self) => self.renderToken(tokens, idx, options))
+md.renderer.rules.link_open = (tokens, idx, options, env, self) => {
+  tokens[idx].attrSet("target", "_blank")
+  tokens[idx].attrSet("rel", "noopener noreferrer")
+  return defaultLinkRender(tokens, idx, options, env, self)
+}
 
 /** Render markdown source to an HTML string (escaped HTML, safe links). */
 export function renderMarkdown(src: string): string {
