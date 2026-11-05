@@ -121,6 +121,23 @@ OpenCode exposes no host metrics. Real-data sources, local-first:
   "General") while session payloads carry lowercase agent ids ("build",
   "reviewer"); mode resolution in the graph is case-insensitive.
 
+## Model switching (verified live 2026-11-05)
+
+- **`POST /api/session/{id}/model`** — body `{ "model": { "id", "providerID",
+  "variant?" } }` (Model.Ref: **nested under a `model` key**, uses `id` — NOT
+  `modelID`; flat and `modelID` forms → `InvalidRequestError: Missing key`).
+  Responds **204 No Content**; `GET /api/session/{id}` then carries the new
+  `model`. Omitting `variant` normalizes to `variant: "default"`.
+- ⚠ **The server validates nothing**: bogus provider (`nope/x`) and bogus
+  variant (`turbo`) both → 204 and stored verbatim in the session. Clients
+  must only send catalog-backed entries — the sidebar ModelSelect builds
+  options from `GET /api/model`, and `nexus.setSessionModel` re-validates as
+  the single call site for `api.setSessionModel`.
+- **`GET /api/model/default`** → full default-model record `{id, modelID,
+  providerID, name, package, settings, capabilities, variants[], time}`.
+  Fresh sessions report `model: null` until first use — the UI falls back to
+  this for the "current LLM" display.
+
 ## Gotchas
 
 - `GET /api/session` without `directory` returns sessions for server cwd.

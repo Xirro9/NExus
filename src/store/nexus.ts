@@ -10,7 +10,9 @@ import type {
   ChatMessage,
   CommandInfo,
   ConnectionStatus,
+  DefaultModelInfo,
   ModelInfo,
+  ModelRef,
   PermissionReply,
   PermissionRequest,
   ProjectInfo,
@@ -38,6 +40,9 @@ export interface NexusState {
   agents: AgentInfo[]
   projects: ProjectInfo[]
   models: ModelInfo[] // provider catalog — ctx-limit chain (SPEC-PHASE2 §4.1)
+  /** GET /api/model/default — fallback display when the active session has
+   *  no model yet (fresh sessions report model:null until first use). */
+  defaultModel: DefaultModelInfo | null
   activeProjectId: string | null // sidebar filter
   toast: { kind: "error" | "info"; text: string } | null
   // internal scheduling markers consumed by the applyEvent wrapper (§4)
@@ -70,6 +75,12 @@ export interface NexusState {
     decision: PermissionReply,
     message?: string,
   ): Promise<void>
+  /** Switch the active session's model (POST /api/session/{id}/model).
+   *  Optimistic with revert-on-error; the SSE session.updated + a sessions
+   *  refetch heal authoritatively. Validates the ref against the catalog
+   *  first — the server stores payloads verbatim (verified live, API-NOTES).
+   *  ⚠ SINGLE CALL SITE for api.setSessionModel. */
+  setSessionModel(providerID: string, modelID: string, variant?: string): Promise<void>
   resync(): Promise<void>
   applyEvent(e: NexusEvent): void
 }
@@ -123,6 +134,12 @@ function scheduleRefetch(targets: RefetchTarget[]) {
         : null,
       targets.includes("models")
         ? api.listModels().then((models) => ({ models }))
+        : null,
+      targets.includes("models")
+        ? api
+            .getDefaultModel()
+            .catch(() => null)
+            .then((defaultModel) => ({ defaultModel }))
         : null,
       targets.includes("sessions")
         ? state.resync()
@@ -263,7 +280,7 @@ export const useNexus = create<NexusState>()((set, get) => {
         if (!fresh()) return
         set({ messages: { ...get().messages, [activeId]: msgs } })
       }
-      const [commands, agents, projects, models, permissionRequests] =
+      const [commands, agents, projects, models, permissionRequests, defaultModel] =
         await Promise.all([
           api.listCommands(),
           api.listAgents(),
@@ -271,6 +288,9 @@ export const useNexus = create<NexusState>()((set, get) => {
           api.listModels(),
           // drawer populated on boot/reconnect (SPEC-PHASE3 §4.1)
           api.listPermissionRequests(),
+          // best-effort: only the model dropdown consumes it — never let a
+          // failure here degrade the whole resync to offline
+          api.getDefaultModel().catch(() => null),
         ])
       if (!fresh()) return
       set({
@@ -278,6 +298,7 @@ export const useNexus = create<NexusState>()((set, get) => {
         agents,
         projects,
         models,
+        defaultModel,
         permissionRequests,
         pendingPermissions: permissionRequests.length,
         pendingRefetch: [],
@@ -314,6 +335,7 @@ export const useNexus = create<NexusState>()((set, get) => {
     agents: [],
     projects: [],
     models: [],
+    defaultModel: null,
     activeProjectId: null,
     toast: null,
     pendingReconcile: null,
@@ -488,6 +510,53 @@ export const useNexus = create<NexusState>()((set, get) => {
         }
         set({ permissionRequests: prev, pendingPermissions: prev.length })
         handleApiError("permission reply", err)
+      }
+    },
+
+    async setSessionModel(providerID, modelID, variant) {
+      const sessionID = get().activeSessionId
+      if (!sessionID) return
+      // the server stores model refs verbatim with no validation (verified
+      // live, API-NOTES) — validate against the catalog before sending
+      const entry = get().models.find(
+        (m) => m.providerID === providerID && m.id === modelID,
+      )
+      if (!entry) {
+        toast("error", "Model not in the provider catalog")
+        return
+      }
+      // the server normalizes an absent variant to "default" — send neither
+      const cleanVariant = variant && variant !== "default" ? variant : undefined
+      if (cleanVariant && !entry.variants?.some((v) => v.id === cleanVariant)) {
+        toast("error", `Unknown variant "${cleanVariant}"`)
+        return
+      }
+      const ref: ModelRef = {
+        id: modelID,
+        providerID,
+        ...(cleanVariant ? { variant: cleanVariant } : {}),
+      }
+      // optimistic — the SSE session.updated + sessions refetch heal; revert
+      // on error (409 busy, 401 auth stale, …)
+      const session = get().sessions[sessionID]
+      const prevModel = session?.model
+      if (session) {
+        set({
+          sessions: { ...get().sessions, [sessionID]: { ...session, model: ref } },
+        })
+      }
+      try {
+        await api.setSessionModel(sessionID, ref)
+        scheduleRefetch(["sessions"])
+      } catch (err) {
+        const s = get()
+        const cur = s.sessions[sessionID]
+        if (cur && prevModel) {
+          set({
+            sessions: { ...s.sessions, [sessionID]: { ...cur, model: prevModel } },
+          })
+        }
+        handleApiError("model switch", err)
       }
     },
 

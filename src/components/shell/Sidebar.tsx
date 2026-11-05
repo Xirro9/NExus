@@ -13,6 +13,7 @@ import { useStatus } from "@/store/selectors"
 import type { SessionInfo } from "@/lib/opencode/types"
 
 import { ConnectionBadge } from "./ConnectionBadge"
+import { ModelSelect } from "./ModelSelect"
 import { SessionListItem } from "./SessionListItem"
 
 export function Sidebar() {
@@ -116,6 +117,9 @@ export function Sidebar() {
           </select>
         </label>
       </div>
+
+      {/* current LLM + per-session model switch */}
+      <ModelSelect />
 
       {/* session list */}
       <div className="flex items-baseline justify-between px-4 pt-1 pb-1.5">

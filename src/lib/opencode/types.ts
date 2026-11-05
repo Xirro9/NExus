@@ -133,6 +133,19 @@ export interface ModelInfo {
   variants?: { id: string; [k: string]: unknown }[]
 }
 
+/** GET /api/model/default — the server's default model (full record; verified
+ *  live 2026-11-05: {id, modelID, providerID, name, package, settings,
+ *  capabilities, variants, time}). Only identity/name/variants are consumed —
+ *  the rest is carried opaquely. Fresh sessions report model:null until first
+ *  use, so the UI falls back to this. */
+export interface DefaultModelInfo {
+  id: string
+  modelID: string
+  providerID: string
+  name: string
+  variants?: { id: string; [k: string]: unknown }[]
+}
+
 /** Item of GET /api/session/{id}/context — messages after the last compaction.
  *  User messages carry `text`; assistant messages carry `content[]` plus
  *  per-message `tokens` + `cost`. */

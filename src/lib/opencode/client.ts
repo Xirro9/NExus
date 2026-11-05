@@ -11,10 +11,12 @@ import type {
   CommandBody,
   CommandInfo,
   ContextMessage,
+  DefaultModelInfo,
   McpServerInfo,
   MessagePart,
   MessageRole,
   ModelInfo,
+  ModelRef,
   PermissionReply,
   PermissionRequest,
   PluginInfo,
@@ -249,6 +251,25 @@ export const api = {
   /** GET /api/model — model catalog with `limit.context` for the ctx chain. */
   listModels(): Promise<ModelInfo[]> {
     return request<ModelInfo[]>("/api/model")
+  },
+
+  /** GET /api/model/default — the server's default model (no session needed;
+   *  fresh sessions carry model:null until first use). */
+  getDefaultModel(): Promise<DefaultModelInfo> {
+    return request<DefaultModelInfo>("/api/model/default")
+  },
+
+  /** POST /api/session/{id}/model { model: Model.Ref } — 204 No Content.
+   *  Verified live 2026-11-05: the ref is NESTED under a `model` key and uses
+   *  `id` (not `modelID`); omitting variant normalizes to variant:"default".
+   *  ⚠ The server validates NOTHING — a bogus provider/model/variant is
+   *  stored verbatim with 204. Only catalog-backed refs may be sent;
+   *  nexus.setSessionModel is the single call site and validates first. */
+  setSessionModel(sessionID: string, model: ModelRef): Promise<void> {
+    return request<void>(`/api/session/${sessionID}/model`, {
+      method: "POST",
+      body: JSON.stringify({ model }),
+    })
   },
 
   /** GET /api/session/{id}/context — messages after the last compaction
