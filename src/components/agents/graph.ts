@@ -4,6 +4,10 @@
 // every SSE signal is already ingested by the Phase 1 reducer.
 
 import type { SessionInfo } from "@/lib/opencode/types"
+import {
+  DEFAULT_PRIORITY,
+  type SessionPriority,
+} from "@/lib/sessionPriority"
 
 export type AgentNodeStatus =
   | "running"
@@ -19,6 +23,8 @@ export interface AgentNode {
   agentMode: "primary" | "subagent" | "all" // resolved from the agents list
   title: string
   status: AgentNodeStatus
+  /** Jerry-side organizational priority — never affects inference order */
+  priority: SessionPriority
   tokens: number // sum of the five TokenUsage classes
   cost: number
   createdAt: number
@@ -57,6 +63,7 @@ export function buildGraph(
   activeMap: Record<string, { type: "running" }> | null,
   scopeProjectId: string | null,
   agentModes: AgentModes = {},
+  priorities: Record<string, SessionPriority> = {},
 ): { nodes: AgentNode[]; edges: AgentEdge[] } {
   const all = Object.values(sessions)
   const inScope = scopeProjectId
@@ -79,6 +86,7 @@ export function buildGraph(
         agentModes[(s.agent ?? "build").toLowerCase()] ?? "primary",
       title: s.title || "Untitled session",
       status,
+      priority: priorities[s.id] ?? DEFAULT_PRIORITY,
       tokens: t
         ? (t.input ?? 0) +
           (t.output ?? 0) +

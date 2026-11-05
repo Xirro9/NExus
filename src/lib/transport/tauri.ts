@@ -12,7 +12,14 @@ import type {
 } from "@/lib/opencode/sse"
 import type { TelemetrySnapshot } from "@/lib/telemetry/types"
 
-import type { Transport, TransportRequestInit, TransportResponse } from "./types"
+import type {
+  GraphifyDetect,
+  GraphifyExecResult,
+  GraphifyStatus,
+  Transport,
+  TransportRequestInit,
+  TransportResponse,
+} from "./types"
 
 interface ApiFetchResponse {
   status: number
@@ -128,4 +135,17 @@ export const tauriTransport: Transport = {
     return invoke<TelemetrySnapshot>("telemetry_snapshot", { tail: null })
   },
   connectEvents,
+  graphifyDetect(): Promise<GraphifyDetect> {
+    return invoke("graphify_detect")
+  },
+  graphifyStatus(cwd: string): Promise<GraphifyStatus> {
+    return invoke("graphify_status", { cwd })
+  },
+  graphifyExec(
+    cwd: string,
+    args: string[],
+  ): Promise<GraphifyExecResult> {
+    // whitelist violations reject (Err in Rust) — same channel as IPC failures
+    return invoke("graphify_exec", { cwd, args })
+  },
 }

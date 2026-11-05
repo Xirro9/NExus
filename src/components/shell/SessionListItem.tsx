@@ -5,7 +5,7 @@
 // props stay intact. The row is a role="button" div (not a real <button>) so
 // the chevron toggle can be a real button without nested-button invalid HTML.
 
-import { ChevronDown, ChevronRight } from "lucide-react"
+import { ChevronDown, ChevronRight, MoreVertical } from "lucide-react"
 
 import type { SessionInfo } from "@/lib/opencode/types"
 
@@ -28,6 +28,8 @@ export function SessionListItem({
   childCount,
   expanded,
   onToggleChildren,
+  onContextMenu,
+  onActionsClick,
 }: {
   session: SessionInfo
   active: boolean
@@ -39,6 +41,10 @@ export function SessionListItem({
   childCount?: number
   expanded?: boolean
   onToggleChildren?(): void
+  /** right-click → shared session control menu (P0) */
+  onContextMenu?(e: { clientX: number; clientY: number; preventDefault(): void }): void
+  /** visible kebab → the same menu, for touch/keyboard users (P0) */
+  onActionsClick?(e: { clientX: number; clientY: number; preventDefault(): void; stopPropagation(): void }): void
 }) {
   return (
     <div
@@ -51,9 +57,15 @@ export function SessionListItem({
           onSelect(session.id)
         }
       }}
+      onContextMenu={(e) => {
+        if (onContextMenu) {
+          e.preventDefault()
+          onContextMenu(e)
+        }
+      }}
       aria-current={active ? "true" : undefined}
       className={
-        "w-full cursor-pointer rounded-lg px-2 py-1.5 text-left transition-colors duration-150 " +
+        "group/row w-full cursor-pointer rounded-lg px-2 py-1.5 text-left transition-colors duration-150 " +
         (active
           ? "bg-secondary text-secondary-foreground ring-1 ring-border/60"
           : "hover:bg-secondary/50")
@@ -96,6 +108,20 @@ export function SessionListItem({
         <span className="shrink-0 font-mono text-[10px] text-muted-foreground/80">
           {relativeTime(session.time.updated || session.time.created)}
         </span>
+        {onActionsClick && (
+          <button
+            type="button"
+            aria-label={`Actions for session ${session.title || session.id}`}
+            title="Session actions"
+            onClick={(e) => {
+              e.stopPropagation()
+              onActionsClick(e)
+            }}
+            className="flex size-5 shrink-0 items-center justify-center rounded-md text-muted-foreground opacity-40 transition-opacity duration-150 hover:text-foreground focus-visible:opacity-100 group-hover/row:opacity-100"
+          >
+            <MoreVertical className="size-3" aria-hidden />
+          </button>
+        )}
       </div>
       <div className="mt-0.5 pl-3.5 font-mono text-[10px] text-muted-foreground/80">
         {child ? (

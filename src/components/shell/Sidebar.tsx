@@ -11,12 +11,18 @@ import { Folder, Plus } from "lucide-react"
 import { useNexus } from "@/store/nexus"
 import { useStatus } from "@/store/selectors"
 import type { SessionInfo } from "@/lib/opencode/types"
+import { useSessionActions } from "@/components/agents/sessionActions"
 
 import { ConnectionBadge } from "./ConnectionBadge"
 import { ModelSelect } from "./ModelSelect"
 import { SessionListItem } from "./SessionListItem"
 
-export function Sidebar() {
+export function Sidebar({
+  onInspect,
+}: {
+  /** Inspect Agent (P0 context menu) → Agents tab with the node selected. */
+  onInspect?(id: string): void
+}) {
   const status = useStatus()
   const version = useNexus((s) => s.connection.version)
   const sessionOrder = useNexus((s) => s.sessionOrder)
@@ -28,6 +34,13 @@ export function Sidebar() {
   const newSession = useNexus((s) => s.newSession)
   // expanded parent ids (collapsed by default, §9.1)
   const [expanded, setExpanded] = useState<Set<string>>(() => new Set())
+
+  // shared P0 session-control menu (right-click / kebab on rows)
+  const actions = useSessionActions({
+    onOpenSession: (id) => void useNexus.getState().setActiveSession(id),
+    onInspect,
+  })
+  const openRowMenu = actions.openMenu
 
   const { roots, orphans, childrenOf } = useMemo(() => {
     const ids = activeProjectId
@@ -162,6 +175,8 @@ export function Sidebar() {
                         ? () => toggleExpanded(session.id)
                         : undefined
                     }
+                    onContextMenu={(e) => openRowMenu(e, session.id)}
+                    onActionsClick={(e) => openRowMenu(e, session.id)}
                   />
                   {children.length > 0 && expanded.has(session.id) && (
                     <ul className="ml-5 space-y-0.5 border-l border-border/50 pl-2">
@@ -175,6 +190,8 @@ export function Sidebar() {
                               void useNexus.getState().setActiveSession(id)
                             }
                             child={{ agent: child.agent }}
+                            onContextMenu={(e) => openRowMenu(e, child.id)}
+                            onActionsClick={(e) => openRowMenu(e, child.id)}
                           />
                         </li>
                       ))}
@@ -191,12 +208,15 @@ export function Sidebar() {
                   busy={busy[session.id] ?? false}
                   onSelect={(id) => void useNexus.getState().setActiveSession(id)}
                   child={{ agent: session.agent }}
+                  onContextMenu={(e) => openRowMenu(e, session.id)}
+                  onActionsClick={(e) => openRowMenu(e, session.id)}
                 />
               </li>
             ))}
           </ul>
         )}
       </nav>
+      {actions.overlays}
     </aside>
   )
 }

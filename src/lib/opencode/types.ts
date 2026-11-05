@@ -40,6 +40,14 @@ export interface SessionInfo {
   location: LocationRef
 }
 
+/** One queued (not yet consumed) inbox entry — a pending user prompt or
+ *  steer. Shape verified loosely: only `id` is load-bearing for Jerry
+ *  (DELETE …/inbox/{id}); extra fields pass through untouched. */
+export interface InboxEntry {
+  id: string
+  [key: string]: unknown
+}
+
 export type MessageRole =
   | "user"
   | "assistant"

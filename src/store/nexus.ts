@@ -18,7 +18,15 @@ import type {
   ProjectInfo,
   SessionInfo,
 } from "@/lib/opencode/types"
+import {
+  DEFAULT_PRIORITY,
+  isSessionPriority,
+  loadPriorities,
+  savePriorities,
+  type SessionPriority,
+} from "@/lib/sessionPriority"
 import { applyEvent, type RefetchTarget } from "./events"
+import { FILE_EDIT_TOOLS } from "@/lib/graphify"
 import { useWorkspace } from "./workspace"
 
 export interface NexusState {
@@ -45,6 +53,9 @@ export interface NexusState {
   defaultModel: DefaultModelInfo | null
   activeProjectId: string | null // sidebar filter
   toast: { kind: "error" | "info"; text: string } | null
+  /** Jerry-side organizational priorities (localStorage-persisted). NEVER
+   *  affects inference scheduling — OpenCode v2.2.5 has no priority API. */
+  priorities: Record<string, SessionPriority>
   // internal scheduling markers consumed by the applyEvent wrapper (§4)
   pendingReconcile: { sessionID: string; at: number } | null
   pendingRefetch: RefetchTarget[]
@@ -60,6 +71,19 @@ export interface NexusState {
   sendPrompt(text: string): Promise<boolean>
   sendSlashCommand(name: string, rest: string): Promise<void>
   interruptActive(): Promise<void>
+  /** Stop a session's execution from the Agents tab / sidebar.
+   *  - "interrupt": interrupt the active generation only (Stop Execution).
+   *  - "terminate" (End Session / Kill): interrupt AND purge queued inbox
+   *    prompts (steer prompts queued after a dead run are never consumed —
+   *    the known stuck-running failure mode). Conversation history is NEVER
+   *    touched by either mode.
+   *  Reports the actual server outcome via toasts — never a fake success. */
+  stopSession(sessionID: string, mode: "interrupt" | "terminate"): Promise<void>
+  /** DELETE /api/session/{id} — permanent, cascades to child sessions.
+   *  Optimistic local removal; restored on failure. Destructive. */
+  deleteSession(sessionID: string): Promise<void>
+  /** Set the Jerry-side organizational priority (normal = unset). */
+  setSessionPriority(sessionID: string, priority: SessionPriority): void
   /** Re-fetch the pending permission list (drawer open, manual refresh). */
   refreshPermissions(): Promise<void>
   /** Agents-graph reconciliation poll (5 s, Agents-tab-visible only, §2.2):
@@ -338,6 +362,7 @@ export const useNexus = create<NexusState>()((set, get) => {
     defaultModel: null,
     activeProjectId: null,
     toast: null,
+    priorities: loadPriorities(),
     pendingReconcile: null,
     pendingRefetch: [],
     pendingPermissions: 0,
@@ -453,6 +478,121 @@ export const useNexus = create<NexusState>()((set, get) => {
       } catch (err) {
         handleApiError("interrupt", err)
       }
+    },
+
+    async stopSession(sessionID, mode) {
+      if (!get().sessions[sessionID]) return
+      // 1. interrupt the active generation (server answers honestly: false
+      //    when the session is not executing)
+      let interrupted = false
+      let interruptError: string | null = null
+      try {
+        const res = await api.interrupt(sessionID)
+        interrupted = res.interrupted === true
+        if (interrupted) {
+          // SSE session.execution.interrupted confirms authoritatively; this
+          // optimistic clear just avoids a visible busy beat
+          set({ busy: { ...get().busy, [sessionID]: false } })
+        }
+      } catch (err) {
+        interruptError = err instanceof Error ? err.message : String(err)
+      }
+      // 2. terminate mode also purges queued inbox prompts (steer prompts
+      //    queued behind a dead run are never consumed — the stuck-running bug)
+      let purged = 0
+      let purgeError: string | null = null
+      if (mode === "terminate") {
+        try {
+          const entries = await api.listInbox(sessionID)
+          for (const entry of entries) {
+            try {
+              await api.deleteInboxEntry(sessionID, entry.id)
+              purged++
+            } catch {
+              // one entry vanishing mid-purge (already consumed) is non-fatal
+            }
+          }
+        } catch (err) {
+          purgeError = err instanceof Error ? err.message : String(err)
+        }
+      }
+      // 3. report the REAL outcome — never a fabricated success
+      const facts: string[] = []
+      if (interrupted) facts.push("execution interrupted")
+      if (purged > 0)
+        facts.push(`${purged} queued prompt${purged === 1 ? "" : "s"} dropped`)
+      if (interruptError) {
+        toast("error", `Stop failed: ${interruptError}`)
+        return
+      }
+      if (mode === "interrupt") {
+        toast("info", interrupted ? "Execution interrupted" : "Session was not running")
+      } else if (facts.length > 0) {
+        toast("info", `Session ended — ${facts.join(", ")}`)
+      } else {
+        toast("info", "Session was idle — nothing to stop")
+      }
+      if (purgeError) toast("error", `Inbox purge failed: ${purgeError}`)
+    },
+
+    async deleteSession(sessionID) {
+      const s = get()
+      const session = s.sessions[sessionID]
+      if (!session) return
+      // the server cascades child sessions (verified live) — mirror that
+      // locally so the tree doesn't flicker orphaned children
+      const removed = new Set<string>([sessionID])
+      for (const other of Object.values(s.sessions)) {
+        if (other.parentID === sessionID) removed.add(other.id)
+      }
+      const prevSessions = s.sessions
+      const prevOrder = s.sessionOrder
+      const prevMessages = s.messages
+      const prevPriorities = s.priorities
+      const sessions = { ...s.sessions }
+      const messages = { ...s.messages }
+      for (const id of removed) {
+        delete sessions[id]
+        delete messages[id]
+      }
+      const priorities = { ...s.priorities }
+      for (const id of removed) delete priorities[id]
+      savePriorities(priorities)
+      set({
+        sessions,
+        messages,
+        priorities,
+        sessionOrder: prevOrder.filter((id) => !removed.has(id)),
+        ...(s.activeSessionId && removed.has(s.activeSessionId)
+          ? { activeSessionId: null }
+          : {}),
+      })
+      try {
+        await api.deleteSession(sessionID)
+        // per-session session.deleted SSE events confirm; this refetch heals
+        // anything the optimistic pass missed
+        scheduleRefetch(["sessions"])
+      } catch (err) {
+        // restore — the delete did NOT happen
+        set({
+          sessions: prevSessions,
+          sessionOrder: prevOrder,
+          messages: prevMessages,
+          priorities: prevPriorities,
+        })
+        savePriorities(prevPriorities)
+        handleApiError("delete session", err)
+      }
+    },
+
+    setSessionPriority(sessionID, priority) {
+      if (!isSessionPriority(priority)) return
+      const priorities = { ...get().priorities }
+      // default stays absent from storage — the map only carries overrides
+      if (priority === DEFAULT_PRIORITY) delete priorities[sessionID]
+      else priorities[sessionID] = priority
+      savePriorities(priorities)
+      set({ priorities })
     },
 
     async refreshPermissions() {
@@ -580,6 +720,20 @@ export const useNexus = create<NexusState>()((set, get) => {
       }
       if (next.pendingRefetch.length > 0) {
         scheduleRefetch(next.pendingRefetch)
+      }
+      // Graphify staleness bridge: a file-mutating tool call in ANY session
+      // marks that project's knowledge graph dirty (workspace-owned state —
+      // lives there to avoid an import cycle; see docs/NOTES-SESSIONS-GRAPHIFY)
+      if (e.type === "session.tool.called") {
+        const { sessionID, name } = e.data as { sessionID?: unknown; name?: unknown }
+        if (
+          typeof sessionID === "string" &&
+          typeof name === "string" &&
+          FILE_EDIT_TOOLS.has(name.toLowerCase())
+        ) {
+          const projectID = next.sessions[sessionID]?.projectID
+          if (projectID) useWorkspace.getState().markGraphDirty(projectID)
+        }
       }
     },
   }

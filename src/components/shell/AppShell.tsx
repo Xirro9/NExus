@@ -89,6 +89,11 @@ export function AppShell() {
     void useWorkspace.getState().searchHistory({ projectId })
     changeView("history")
   }
+  /** Sidebar "Inspect Agent" (P0 context menu) → Agents tab, node selected. */
+  const inspectSession = (id: string) => {
+    useWorkspace.setState({ selectedGraphNode: id })
+    changeView("agents")
+  }
 
   const toggleRail = () => {
     setRailCollapsed((prev) => {
@@ -101,7 +106,7 @@ export function AppShell() {
     <div className="flex h-screen flex-col overflow-hidden bg-background text-foreground">
       {status !== "online" && <DegradedBanner status={status} />}
       <div className="grid min-h-0 flex-1 grid-cols-[280px_1fr] lg:grid-cols-[280px_1fr_260px]">
-        <Sidebar />
+        <Sidebar onInspect={inspectSession} />
         <main className="flex min-h-0 min-w-0 flex-col">
           <MainTabs
             view={mainView}

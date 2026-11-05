@@ -12,6 +12,7 @@ import type {
   CommandInfo,
   ContextMessage,
   DefaultModelInfo,
+  InboxEntry,
   McpServerInfo,
   MessagePart,
   MessageRole,
@@ -233,6 +234,26 @@ export const api = {
       `/api/session/${sessionID}/interrupt`,
       { method: "POST" },
     )
+  },
+
+  /** DELETE /api/session/{id} — removes the session AND its conversation
+   *  history. The server cascades child (subagent) sessions. Verified live
+   *  2026-11-05 against v2.2.5 (openapi: delete /api/session/{sessionID}). */
+  deleteSession(sessionID: string): Promise<void> {
+    return request<void>(`/api/session/${sessionID}`, { method: "DELETE" })
+  },
+
+  /** GET /api/session/{id}/inbox — queued (unconsumed) prompts/steers. */
+  listInbox(sessionID: string): Promise<InboxEntry[]> {
+    return request<InboxEntry[]>(`/api/session/${sessionID}/inbox`)
+  },
+
+  /** DELETE /api/session/{id}/inbox/{inboxID} — drop one queued entry.
+   *  Verified live 2026-11-05 against v2.2.5; emits session.inbox.cancelled. */
+  deleteInboxEntry(sessionID: string, inboxID: string): Promise<void> {
+    return request<void>(`/api/session/${sessionID}/inbox/${inboxID}`, {
+      method: "DELETE",
+    })
   },
 
   listAgents(): Promise<AgentInfo[]> {

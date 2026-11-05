@@ -7,14 +7,28 @@
 import { create } from "zustand"
 
 import { api } from "@/lib/opencode/client"
+import {
+  GRAPHIFY_INSTALL_HINT,
+  buildClusterArgs,
+  buildExplainArgs,
+  buildExtractArgs,
+  buildHubsArgs,
+  buildPathArgs,
+  buildQueryArgs,
+  buildUpdateArgs,
+  describeExecFailure,
+  parseHubs,
+} from "@/lib/graphify"
+import { transport } from "@/lib/transport"
+import type { SessionInfo } from "@/lib/opencode/types"
 import type {
   McpServerInfo,
   PluginInfo,
   SessionCursor,
-  SessionInfo,
   SkillInfo,
   WorktreeDirectory,
 } from "@/lib/opencode/types"
+import type { GraphifyDetect } from "@/lib/transport/types"
 
 export type MemoryFileId =
   | "memory"
@@ -73,6 +87,21 @@ const EMPTY_WORKTREES: WorktreeDirectory[] = []
  *  out-of-order responses must not overwrite newer results/cursor. */
 let historyGen = 0
 
+/** In-flight `graphify --version` detection — coalesces concurrent callers.
+ *  Reset on failure so an install + retry works without an app restart. */
+let cliDetect: Promise<GraphifyDetect | null> | null = null
+
+/** Merge a patch into one project's GraphifyEntry (create-on-write). */
+function patchGraphEntry(
+  set: (partial: Partial<WorkspaceState>) => void,
+  get: () => WorkspaceState,
+  projectID: string,
+  patch: Partial<GraphifyEntry>,
+): void {
+  const current = get().graphify[projectID] ?? EMPTY_ENTRY
+  set({ graphify: { ...get().graphify, [projectID]: { ...current, ...patch } } })
+}
+
 export interface WorkspaceState {
   // history browser (server-side query; §6)
   historyQuery: string
@@ -115,6 +144,68 @@ export interface WorkspaceState {
   // memory viewer
   memory: Record<MemoryFileId, MemoryFileEntry>
   loadMemoryFile(id: MemoryFileId): Promise<void>
+
+  // session inbox (P0): queued-prompt counts for the agents detail panel.
+  // null = unknown (fetch failed or never fetched) — never rendered as a fact.
+  inboxCounts: Record<string, number | null>
+  fetchInboxCount(sessionID: string): Promise<void>
+
+  // graphify (docs/NOTES-SESSIONS-GRAPHIFY.md): optional per-project code
+  // knowledge graphs via the official CLI. All state is on-demand + cached;
+  // maintenance never blocks OpenCode execution (separate OS process).
+  graphifyCli: GraphifyDetect | null
+  graphify: Record<string, GraphifyEntry>
+  /** projectID → timestamp of the last OBSERVED file-mutating tool call.
+   *  Fed by nexus.applyEvent (SSE), cleared by a successful update. */
+  graphDirty: Record<string, number>
+  markGraphDirty(projectID: string): void
+  clearGraphDirty(projectID: string): void
+  ensureGraphifyCli(): Promise<GraphifyDetect | null>
+  checkGraphStatus(projectID: string, cwd: string): Promise<void>
+  /** Build the graph (missing) or incrementally update it (exists).
+   *  Returns "skipped" when the graph is provably fresh (no observed source
+   *  activity since the last build) so no process is spawned. */
+  refreshGraph(
+    projectID: string,
+    cwd: string,
+    skipIfClean: boolean,
+  ): Promise<"ok" | "skipped" | "error" | "unavailable">
+  runGraphQuery(
+    cwd: string,
+    kind: GraphQueryKind,
+    input: string,
+  ): Promise<{ ok: boolean; output: string; note: string | null }>
+}
+
+export type GraphQueryKind = "query" | "path" | "explain"
+
+export interface GraphifyEntry {
+  status:
+    | "idle"
+    | "checking"
+    | "updating"
+    | "ready"
+    | "missing"
+    | "error"
+    | "unavailable"
+  nodeCount: number | null
+  edgeCount: number | null
+  mtimeMs: number | null
+  graphifyVersion: string | null
+  lastDurationMs: number | null
+  error: string | null
+  hubs: { label: string; degree: number }[] | null
+}
+
+const EMPTY_ENTRY: GraphifyEntry = {
+  status: "idle",
+  nodeCount: null,
+  edgeCount: null,
+  mtimeMs: null,
+  graphifyVersion: null,
+  lastDurationMs: null,
+  error: null,
+  hubs: null,
 }
 
 function initialMemory(): Record<MemoryFileId, MemoryFileEntry> {
@@ -318,6 +409,246 @@ export const useWorkspace = create<WorkspaceState>()((set, get) => ({
           [id]: { status, content: null, fetchedAt: null },
         },
       })
+    }
+  },
+
+  inboxCounts: {},
+
+  async fetchInboxCount(sessionID) {
+    try {
+      const entries = await api.listInbox(sessionID)
+      set({
+        inboxCounts: { ...get().inboxCounts, [sessionID]: entries.length },
+      })
+    } catch {
+      // unknown ≠ zero — the panel renders "—" for null
+      set({ inboxCounts: { ...get().inboxCounts, [sessionID]: null } })
+    }
+  },
+
+  // --- graphify (docs/NOTES-SESSIONS-GRAPHIFY.md) ---------------------------
+  // Every command here goes through the transport seam → host executor
+  // (Rust command / dev middleware) with a strict arg whitelist. Nothing
+  // blocks OpenCode: graphify runs as a separate OS process.
+
+  graphifyCli: null,
+  graphify: {},
+  graphDirty: {},
+
+  markGraphDirty(projectID) {
+    set({ graphDirty: { ...get().graphDirty, [projectID]: Date.now() } })
+  },
+
+  clearGraphDirty(projectID) {
+    if (!(projectID in get().graphDirty)) return
+    const next = { ...get().graphDirty }
+    delete next[projectID]
+    set({ graphDirty: next })
+  },
+
+  async ensureGraphifyCli() {
+    const cached = get().graphifyCli
+    if (cached !== null) return cached
+    cliDetect ??= transport
+      .graphifyDetect()
+      .catch(() => null)
+      .then((d) => {
+        if (d === null) {
+          cliDetect = null // detect failed (not "unavailable") — allow retry
+          return null
+        }
+        set({ graphifyCli: d })
+        return d
+      })
+    return cliDetect
+  },
+
+  async checkGraphStatus(projectID, cwd) {
+    const cli = await get().ensureGraphifyCli()
+    if (cli === null || !cli.available) {
+      patchGraphEntry(set, get, projectID, { status: "unavailable", error: null })
+      return
+    }
+    patchGraphEntry(set, get, projectID, { status: "checking" })
+    try {
+      const st = await transport.graphifyStatus(cwd)
+      patchGraphEntry(set, get, projectID, {
+        status: st.found ? "ready" : "missing",
+        nodeCount: st.found ? st.nodeCount : null,
+        edgeCount: st.found ? st.edgeCount : null,
+        mtimeMs: st.found ? st.mtimeMs : null,
+        graphifyVersion: st.graphifyVersion,
+        error: null,
+      })
+    } catch (err) {
+      patchGraphEntry(set, get, projectID, {
+        status: "error",
+        error: err instanceof Error ? err.message : String(err),
+      })
+    }
+  },
+
+  async refreshGraph(projectID, cwd, skipIfClean) {
+    const cli = await get().ensureGraphifyCli()
+    if (cli === null || !cli.available) {
+      patchGraphEntry(set, get, projectID, { status: "unavailable", error: null })
+      return "unavailable"
+    }
+    let entry = get().graphify[projectID] ?? EMPTY_ENTRY
+    if (entry.status === "updating") {
+      patchGraphEntry(set, get, projectID, {
+        error: "An update is already running",
+      })
+      return "error"
+    }
+    // No observed source activity since the last build → the hash check
+    // inside `graphify update .` would be a no-op; don't spawn a process.
+    if (
+      skipIfClean &&
+      entry.status === "ready" &&
+      !(projectID in get().graphDirty)
+    ) {
+      return "skipped"
+    }
+    // Build-vs-update needs to know whether graph.json exists. If the status
+    // check never ran, learn it from the cheap stat (no process) first.
+    if (entry.status !== "ready" && entry.status !== "missing") {
+      try {
+        const st = await transport.graphifyStatus(cwd)
+        entry = {
+          ...entry,
+          status: st.found ? "ready" : "missing",
+          nodeCount: st.found ? st.nodeCount : null,
+          edgeCount: st.found ? st.edgeCount : null,
+          mtimeMs: st.found ? st.mtimeMs : null,
+          graphifyVersion: st.graphifyVersion,
+        }
+      } catch (err) {
+        patchGraphEntry(set, get, projectID, {
+          status: "error",
+          error: err instanceof Error ? err.message : String(err),
+        })
+        return "error"
+      }
+    }
+    const hasGraph = entry.status === "ready"
+    const dirtyAtStart = get().graphDirty[projectID]
+    patchGraphEntry(set, get, projectID, { status: "updating", error: null })
+    try {
+      let failure: string | null = null
+      let durationMs = 0
+      if (hasGraph) {
+        // Incremental: re-parses only files whose hashes changed.
+        const r = await transport.graphifyExec(cwd, buildUpdateArgs())
+        durationMs = r.durationMs
+        failure = describeExecFailure(r)
+      } else {
+        // First build: deterministic code-only extraction, then clustering.
+        const ex = await transport.graphifyExec(cwd, buildExtractArgs())
+        durationMs += ex.durationMs
+        failure = describeExecFailure(ex)
+        if (failure === null) {
+          const cl = await transport.graphifyExec(cwd, buildClusterArgs())
+          durationMs += cl.durationMs
+          failure = describeExecFailure(cl)
+        }
+      }
+      if (failure !== null) {
+        // A failed update leaves the previous graph in place — keep "ready"
+        // and surface the error; a failed first build has nothing to show.
+        patchGraphEntry(set, get, projectID, {
+          status: hasGraph ? "ready" : "error",
+          error: failure,
+          lastDurationMs: durationMs,
+        })
+        return "error"
+      }
+      // Success: re-stat for authoritative counts/mtime (the update itself
+      // already succeeded, so a stat failure only keeps the old numbers).
+      const counts: Partial<GraphifyEntry> = { lastDurationMs: durationMs }
+      try {
+        const st = await transport.graphifyStatus(cwd)
+        counts.nodeCount = st.nodeCount
+        counts.edgeCount = st.edgeCount
+        counts.mtimeMs = st.mtimeMs
+        counts.graphifyVersion = st.graphifyVersion
+      } catch {
+        /* keep previous counts */
+      }
+      patchGraphEntry(set, get, projectID, {
+        status: "ready",
+        error: null,
+        ...counts,
+      })
+      // The update covered everything observed before it started. If a
+      // file-edit event landed DURING the update, keep the dirty flag —
+      // the graph may not include that change.
+      if (get().graphDirty[projectID] === dirtyAtStart) {
+        get().clearGraphDirty(projectID)
+      }
+      // Hubs are informational — best-effort, never fail the refresh.
+      try {
+        const hubs = await transport.graphifyExec(cwd, buildHubsArgs())
+        const parsed = parseHubs(hubs.stdout)
+        if (parsed.length > 0) {
+          patchGraphEntry(set, get, projectID, { hubs: parsed })
+        }
+      } catch {
+        /* ignore */
+      }
+      return "ok"
+    } catch (err) {
+      patchGraphEntry(set, get, projectID, {
+        status: hasGraph ? "ready" : "error",
+        error: err instanceof Error ? err.message : String(err),
+      })
+      return "error"
+    }
+  },
+
+  async runGraphQuery(cwd, kind, input) {
+    const cli = await get().ensureGraphifyCli()
+    if (cli === null || !cli.available) {
+      return {
+        ok: false,
+        output: "",
+        note: `Graphify CLI not found — install with: ${GRAPHIFY_INSTALL_HINT}`,
+      }
+    }
+    const trimmed = input.trim()
+    if (trimmed === "") {
+      return { ok: false, output: "", note: "Type a symbol or question first" }
+    }
+    let args: string[]
+    if (kind === "path") {
+      // exactly two symbols, whitespace-separated
+      const [a, b] = trimmed.split(/\s+/)
+      if (a === undefined || b === undefined || trimmed.split(/\s+/).length !== 2) {
+        return {
+          ok: false,
+          output: "",
+          note: "Path mode needs exactly two symbols, separated by a space",
+        }
+      }
+      args = buildPathArgs(a, b)
+    } else if (kind === "query") {
+      args = buildQueryArgs(trimmed, { budget: 800 })
+    } else {
+      args = buildExplainArgs(trimmed)
+    }
+    try {
+      const res = await transport.graphifyExec(cwd, args)
+      const note = describeExecFailure(res)
+      const stderr = res.stderr.trim()
+      const output = `${res.stdout}${stderr !== "" ? `\n${stderr}` : ""}`.trim()
+      // Exit 3 (ambiguous) prints candidates in stdout — keep them visible.
+      return { ok: note === null, output, note }
+    } catch (err) {
+      return {
+        ok: false,
+        output: "",
+        note: err instanceof Error ? err.message : String(err),
+      }
     }
   },
 }))

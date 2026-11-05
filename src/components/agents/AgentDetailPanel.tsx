@@ -1,10 +1,20 @@
 // Selected-node facts panel (SPEC-PHASE3 §2.4, right side, 280 px) with the
-// "Open in Chat" jump. Read-only facts from the projected node.
+// "Open in Chat" jump — extended with P0 session control: Jerry-side priority
+// selector, End Session / Delete Session / Copy ID, and the queued-prompt
+// count for running sessions (real API data, "—" when unknown).
 
-import { ArrowRight } from "lucide-react"
+import { useEffect } from "react"
+import { ArrowRight, Copy, Square, Trash2 } from "lucide-react"
 import { motion, useReducedMotion } from "motion/react"
 
+import {
+  DEFAULT_PRIORITY,
+  PRIORITY_BADGE,
+  SESSION_PRIORITIES,
+} from "@/lib/sessionPriority"
 import { fmtTokens } from "@/lib/format"
+import { useNexus } from "@/store/nexus"
+import { useWorkspace } from "@/store/workspace"
 import type { AgentNode } from "./graph"
 
 function humanDuration(ms: number): string {
@@ -29,14 +39,29 @@ export function AgentDetailPanel({
   node,
   projectPath,
   onOpenInChat,
+  onEnd,
+  onDelete,
+  onCopy,
 }: {
   node: AgentNode
   projectPath: string | null
   onOpenInChat(id: string): void
+  onEnd(id: string): void
+  onDelete(id: string): void
+  onCopy(id: string): void
 }) {
   const duration =
     (node.updatedAt || node.createdAt) - node.createdAt
   const reduceMotion = useReducedMotion()
+
+  const inboxCount = useWorkspace((s) => s.inboxCounts[node.id] ?? null)
+  const fetchInboxCount = useWorkspace((s) => s.fetchInboxCount)
+
+  // queued prompts are only observable while the session can have them
+  useEffect(() => {
+    if (node.status === "running") void fetchInboxCount(node.id)
+  }, [node.id, node.status, fetchInboxCount])
+
   return (
     <motion.aside
       initial={reduceMotion ? false : { x: 24, opacity: 0 }}
@@ -91,9 +116,90 @@ export function AgentDetailPanel({
         </div>
         <div className="flex justify-between gap-2">
           <dt className="text-muted-foreground">session</dt>
-          <dd>…{node.id.slice(-6)}</dd>
+          <dd title={node.id}>…{node.id.slice(-6)}</dd>
         </div>
+        {node.status === "running" && (
+          <div className="flex justify-between gap-2">
+            <dt className="text-muted-foreground">queued</dt>
+            <dd title="Unconsumed prompts in the session inbox (— when unknown)">
+              {inboxCount === null ? "—" : String(inboxCount)}
+            </dd>
+          </div>
+        )}
       </dl>
+
+      {/* priority — organizational only, labeled as such */}
+      <label className="block rounded-xl border border-border/70 bg-card p-2.5">
+        <span className="flex items-baseline justify-between gap-2">
+          <span className="text-[10px] font-semibold tracking-wider text-muted-foreground uppercase">
+            Priority
+          </span>
+          <span className="font-mono text-[9px] text-muted-foreground/60">
+            {node.priority !== DEFAULT_PRIORITY ? (
+              <span className={"rounded border px-1 " + PRIORITY_BADGE[node.priority]}>
+                {node.priority}
+              </span>
+            ) : (
+              "unset"
+            )}
+          </span>
+        </span>
+        <select
+          value={node.priority}
+          onChange={(e) =>
+            useNexus
+              .getState()
+              .setSessionPriority(node.id, e.target.value as (typeof SESSION_PRIORITIES)[number])
+          }
+          aria-label="Jerry-side organizational priority (does not affect execution order)"
+          className="mt-1.5 h-7 w-full cursor-pointer rounded-lg border border-border bg-input/60 px-1.5 font-mono text-[11px] text-foreground"
+        >
+          {SESSION_PRIORITIES.map((p) => (
+            <option key={p} value={p}>
+              {p}
+              {p === DEFAULT_PRIORITY ? " (default)" : ""}
+            </option>
+          ))}
+        </select>
+        <span className="mt-1 block text-[9px] leading-3 text-muted-foreground/70">
+          Jerry-side organization only — OpenCode has no scheduling API.
+        </span>
+      </label>
+
+      {/* session control */}
+      <div className="space-y-1.5">
+        {node.status === "running" && (
+          <button
+            type="button"
+            onClick={() => onEnd(node.id)}
+            className="inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-lg border border-warning/60 px-3 text-sm font-medium text-warning transition-all duration-150 hover:bg-warning/10 active:scale-[0.98]"
+          >
+            <Square className="size-3.5" aria-hidden />
+            End Session
+          </button>
+        )}
+        <div className="flex gap-1.5">
+          <button
+            type="button"
+            onClick={() => onCopy(node.id)}
+            className="inline-flex h-8 flex-1 items-center justify-center gap-1.5 rounded-lg border border-border px-2 text-xs font-medium text-foreground transition-colors duration-150 hover:bg-secondary/60"
+            title="Copy the full OpenCode session ID"
+          >
+            <Copy className="size-3" aria-hidden />
+            Copy ID
+          </button>
+          <button
+            type="button"
+            onClick={() => onDelete(node.id)}
+            className="inline-flex h-8 flex-1 items-center justify-center gap-1.5 rounded-lg border border-destructive/50 px-2 text-xs font-medium text-destructive transition-colors duration-150 hover:bg-destructive/10"
+            title="Permanently delete this session and its history"
+          >
+            <Trash2 className="size-3" aria-hidden />
+            Delete…
+          </button>
+        </div>
+      </div>
+
       <button
         type="button"
         onClick={() => onOpenInChat(node.id)}

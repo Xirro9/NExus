@@ -4,7 +4,14 @@
 import { connectEvents } from "@/lib/opencode/sse"
 import { TELEMETRY_SNAPSHOT_PATH, type TelemetrySnapshot } from "@/lib/telemetry/types"
 
-import type { Transport, TransportRequestInit, TransportResponse } from "./types"
+import type {
+  GraphifyDetect,
+  GraphifyExecResult,
+  GraphifyStatus,
+  Transport,
+  TransportRequestInit,
+  TransportResponse,
+} from "./types"
 
 async function request(
   path: string,
@@ -36,4 +43,36 @@ export const httpTransport: Transport = {
     return (await res.json()) as TelemetrySnapshot
   },
   connectEvents,
+  async graphifyDetect() {
+    const res = await fetch("/graphify/detect", { cache: "no-store" })
+    if (!res.ok) throw new Error(`graphify detect HTTP ${res.status}`)
+    return (await res.json()) as GraphifyDetect
+  },
+  async graphifyStatus(cwd) {
+    const res = await fetch(
+      `/graphify/status?cwd=${encodeURIComponent(cwd)}`,
+      { cache: "no-store" },
+    )
+    if (!res.ok) throw new Error(`graphify status HTTP ${res.status}`)
+    return (await res.json()) as GraphifyStatus
+  },
+  async graphifyExec(cwd, args) {
+    const res = await fetch("/graphify/exec", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ cwd, args }),
+    })
+    if (!res.ok) {
+      // the middleware returns 4xx with {error} for whitelist rejections
+      let message = `graphify exec HTTP ${res.status}`
+      try {
+        const body = (await res.json()) as { error?: string }
+        if (body.error) message = body.error
+      } catch {
+        // keep the status-line message
+      }
+      throw new Error(message)
+    }
+    return (await res.json()) as GraphifyExecResult
+  },
 }

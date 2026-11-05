@@ -10,6 +10,7 @@ import { useNexus } from "@/store/nexus"
 import { useWorkspace } from "@/store/workspace"
 import type { ProjectInfo, SessionInfo } from "@/lib/opencode/types"
 
+import { GraphifyPanel } from "./GraphifyPanel"
 import { WorktreeList } from "./WorktreeList"
 
 function relativeTime(ts: number | undefined): string {
@@ -144,6 +145,7 @@ export function ProjectCard({
             </ul>
           )}
           <WorktreeList projectID={project.id} />
+          <GraphifyPanel projectID={project.id} cwd={project.canonical} />
             </div>
           </motion.div>
         )}

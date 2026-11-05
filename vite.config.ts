@@ -5,6 +5,7 @@ import tailwindcss from "@tailwindcss/vite"
 import react from "@vitejs/plugin-react"
 import { defineConfig } from "vite"
 
+import { graphifyPlugin } from "./src/server/graphify"
 import { telemetryPlugin } from "./src/server/telemetry"
 
 const SERVICE_JSON = homedir() + "/.local/state/opencode/service.json"
@@ -41,7 +42,7 @@ const boot = readService() // target pinned at boot; password re-read per reques
 
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react(), tailwindcss(), telemetryPlugin()],
+  plugins: [react(), tailwindcss(), telemetryPlugin(), graphifyPlugin()],
   resolve: {
     alias: {
       "@": fileURLToPath(new URL("./src", import.meta.url)),

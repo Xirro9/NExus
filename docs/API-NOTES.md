@@ -172,3 +172,29 @@ OpenCode exposes no host metrics. Real-data sources, local-first:
   badge/banner/composer, restart with the documented start command.
 - Drill session `ses_e55b775b7ffeSYtdyXCn2v7iKR` deleted via API after the
   drill (HTTP 204); marker file removed; operator sessions untouched.
+
+---
+
+## Session control + Graphify batch (2026-11-05, server v2.2.5)
+
+Verified live during the P0 session-management + Graphify work
+(docs/NOTES-SESSIONS-GRAPHIFY.md has the full decision log):
+
+- `POST /api/session/{id}/interrupt` → `{"interrupted":true}` (Stop).
+- `GET /api/session/{id}/inbox` → `{"data":[…]}` envelope; entries only
+  guarantee `id`. Empty inbox = `{"data":[]}`.
+- `DELETE /api/session/{id}/inbox/{inboxID}` → emits `session.inbox.cancelled`
+  (Kill = interrupt + per-entry purge; Stop alone leaves queued prompts
+  running).
+- `DELETE /api/session/{id}` → 204, then 404. Parent delete cascades children
+  server-side (child DELETEs then 404 — don't retry them).
+- `POST /api/session` body `{title, location:{directory}}` → `{data:{id,…}}`
+  (scratch-session smoke: create → inbox → delete verified).
+- **No `filesystem.changed` event exists in v2.2.5** (touching a project file
+  produced nothing on `/api/event`). Graphify staleness therefore uses
+  `session.tool.called` file-edit tool names + session `time.updated` vs
+  graph.json mtime; the exact check is `graphify update .` (hash-based).
+- `GET /api/skill` lists globally-installed skills
+  (`~/.config/opencode/skills/…`) — verified with the graphify skill after
+  `graphify install --platform opencode` (which writes global skill + plugin
+  only, never project AGENTS.md).

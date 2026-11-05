@@ -1,8 +1,12 @@
 // xyflow canvas (SPEC-PHASE3 §2.4) — the ONLY file importing @xyflow/react,
 // React.lazy-loaded so the library never enters the entry bundle (§12.3).
 // Unmounted when the Agents tab is hidden (zero-measure guard, §0.12).
+//
+// P0 session control: node context menus + End buttons reach the card through
+// the node data. Callbacks are passed via a ref-stable wrapper so identity
+// churn in AgentGraphView never rebuilds the nodes memo.
 
-import { useMemo } from "react"
+import { useMemo, useRef, type MouseEvent as ReactMouseEvent } from "react"
 import {
   Background,
   BackgroundVariant,
@@ -33,15 +37,26 @@ function statusColor(status: AgentNode["status"]): string {
   }
 }
 
+export interface CanvasCallbacks {
+  onContextMenu(e: { clientX: number; clientY: number; preventDefault(): void }, id: string): void
+  onEnd(id: string): void
+}
+
 export default function AgentGraphCanvas({
   nodes: agentNodes,
   edges: agentEdges,
   positions,
+  callbacks,
 }: {
   nodes: AgentNode[]
   edges: AgentEdge[]
   positions: Map<string, { x: number; y: number }>
+  callbacks: CanvasCallbacks
 }) {
+  // keep the latest callbacks without invalidating the nodes memo
+  const cbRef = useRef<CanvasCallbacks>(callbacks)
+  cbRef.current = callbacks
+
   const selectNode = (id: string | null) => {
     useWorkspace.setState({ selectedGraphNode: id })
   }
@@ -52,7 +67,12 @@ export default function AgentGraphCanvas({
         id: n.id,
         type: "agent",
         position: positions.get(n.id) ?? { x: 0, y: 0 },
-        data: { ...n } as AgentNodeData,
+        data: {
+          ...n,
+          onContextMenu: (e: Parameters<CanvasCallbacks["onContextMenu"]>[0], id: string) =>
+            cbRef.current.onContextMenu(e, id),
+          onEnd: (id: string) => cbRef.current.onEnd(id),
+        },
         selected: false,
       })),
     [agentNodes, positions],
@@ -87,6 +107,10 @@ export default function AgentGraphCanvas({
       nodeTypes={{ agent: AgentNodeCard }}
       onNodeClick={(_, node) => selectNode(node.id)}
       onPaneClick={() => selectNode(null)}
+      onNodeContextMenu={(
+        e: ReactMouseEvent,
+        node: { id: string },
+      ) => cbRef.current.onContextMenu(e, node.id)}
       fitView
       proOptions={{ hideAttribution: false }}
       minZoom={0.2}

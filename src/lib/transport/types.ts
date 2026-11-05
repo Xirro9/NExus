@@ -23,6 +23,37 @@ export interface TransportResponse {
   bodyText: string // "" for 204
 }
 
+// --- Graphify CLI bridge (docs/NOTES-SESSIONS-GRAPHIFY.md) -------------------
+// Both transports route to a host-side executor (Rust commands in Tauri, the
+// Vite dev middleware in the browser) that enforces a strict code-only
+// whitelist. Jerry never runs arbitrary commands through this seam.
+
+export interface GraphifyDetect {
+  available: boolean
+  version: string | null
+  path: string | null
+}
+
+export interface GraphifyStatus {
+  /** graphify-out/graph.json exists in the project */
+  found: boolean
+  mtimeMs: number | null
+  sizeBytes: number | null
+  nodeCount: number | null
+  edgeCount: number | null
+  /** graphify version that built the graph (graph.json header) */
+  graphifyVersion: string | null
+}
+
+export interface GraphifyExecResult {
+  /** process exit code; null when the watchdog killed it */
+  code: number | null
+  stdout: string
+  stderr: string
+  durationMs: number
+  timedOut: boolean
+}
+
 export interface Transport {
   request(path: string, init?: TransportRequestInit): Promise<TransportResponse>
   telemetrySnapshot(): Promise<TelemetrySnapshot>
@@ -30,4 +61,7 @@ export interface Transport {
     onEvent: (e: NexusEvent) => void,
     onState: (s: StreamState) => void,
   ): EventStreamHandle
+  graphifyDetect(): Promise<GraphifyDetect>
+  graphifyStatus(cwd: string): Promise<GraphifyStatus>
+  graphifyExec(cwd: string, args: string[]): Promise<GraphifyExecResult>
 }
