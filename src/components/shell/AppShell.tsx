@@ -1,5 +1,8 @@
 // App shell: grid [280px sidebar] [1fr main] [260px rail], collapsible rail.
-// Mounts the SSE stream + bootstrap exactly once.
+// Mounts the SSE stream, health poll, telemetry poll + bootstrap exactly once.
+// The main area switches Chat | Dashboard (MainTabs): ChatPanel stays mounted
+// (hidden attribute) so scroll state and the SSE stream are untouched; the
+// dashboard mounts lazily on first open and stays mounted (SPEC-PHASE2 §6).
 
 import { useEffect, useState } from "react"
 import { AnimatePresence, motion } from "motion/react"
@@ -7,22 +10,34 @@ import { PanelRightClose, PanelRightOpen } from "lucide-react"
 
 import { useEventStream } from "@/hooks/useEventStream"
 import { useHealthPoll } from "@/hooks/useHealthPoll"
+import { useTelemetryPoll } from "@/hooks/useTelemetryPoll"
 import { useNexus } from "@/store/nexus"
 import { useStatus } from "@/store/selectors"
 import { ChatPanel } from "@/components/chat/ChatPanel"
+import { DashboardView } from "@/components/dashboard/DashboardView"
 import { DegradedBanner } from "./DegradedBanner"
+import { MainTabs, type MainView } from "./MainTabs"
 import { Sidebar } from "./Sidebar"
 import { StatusRail } from "@/components/rail/StatusRail"
 
 const RAIL_KEY = "nexus.railCollapsed"
+const MAIN_VIEW_KEY = "nexus.mainView"
 
 export function AppShell() {
   useEventStream()
   useHealthPoll()
+  useTelemetryPoll()
 
   const bootstrap = useNexus((s) => s.bootstrap)
   const [railCollapsed, setRailCollapsed] = useState(
     () => localStorage.getItem(RAIL_KEY) === "1",
+  )
+  const [mainView, setMainView] = useState<MainView>(() =>
+    localStorage.getItem(MAIN_VIEW_KEY) === "dashboard" ? "dashboard" : "chat",
+  )
+  // lazy dashboard mount: only created on first open, then kept alive
+  const [dashboardEverOpened, setDashboardEverOpened] = useState(
+    () => localStorage.getItem(MAIN_VIEW_KEY) === "dashboard",
   )
   const status = useStatus()
   const toast = useNexus((s) => s.toast)
@@ -30,6 +45,13 @@ export function AppShell() {
   useEffect(() => {
     void bootstrap()
   }, [bootstrap])
+
+  const changeView = (v: MainView) => {
+    setMainView(v)
+    localStorage.setItem(MAIN_VIEW_KEY, v)
+    if (v === "dashboard") setDashboardEverOpened(true)
+  }
+  const dashboardMounted = dashboardEverOpened
 
   const toggleRail = () => {
     setRailCollapsed((prev) => {
@@ -43,8 +65,16 @@ export function AppShell() {
       {status !== "online" && <DegradedBanner status={status} />}
       <div className="grid min-h-0 flex-1 grid-cols-[280px_1fr] lg:grid-cols-[280px_1fr_260px]">
         <Sidebar />
-        <main className="min-h-0 min-w-0">
-          <ChatPanel />
+        <main className="flex min-h-0 min-w-0 flex-col">
+          <MainTabs view={mainView} onChange={changeView} />
+          <div className="min-h-0 flex-1">
+            {/* `hidden` (Tailwind preflight: display:none !important) keeps
+                ChatPanel alive — scroll + SSE untouched across view switches */}
+            <div hidden={mainView !== "chat"} className="h-full">
+              <ChatPanel />
+            </div>
+            {dashboardMounted && <DashboardView visible={mainView === "dashboard"} />}
+          </div>
         </main>
         <aside className="hidden min-h-0 border-l border-border/70 lg:block">
           {railCollapsed ? (
