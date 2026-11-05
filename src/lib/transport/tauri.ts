@@ -19,22 +19,47 @@ interface ApiFetchResponse {
   body: string
 }
 
+// api_fetch returns only the numeric status, so map the common codes for
+// ApiError messages ("404 Not Found" instead of a bare "404" in toasts)
+const STATUS_TEXT: Record<number, string> = {
+  400: "Bad Request",
+  401: "Unauthorized",
+  403: "Forbidden",
+  404: "Not Found",
+  405: "Method Not Allowed",
+  408: "Request Timeout",
+  409: "Conflict",
+  413: "Payload Too Large",
+  422: "Unprocessable Entity",
+  429: "Too Many Requests",
+  500: "Internal Server Error",
+  502: "Bad Gateway",
+  503: "Service Unavailable",
+  504: "Gateway Timeout",
+}
+
 async function request(
   path: string,
   init?: TransportRequestInit,
 ): Promise<TransportResponse> {
+  // same default as http.ts — reqwest adds no Content-Type for a raw
+  // .body(String), so JSON POSTs would arrive without one Rust-side
+  const headers = { ...init?.headers }
+  if (init?.body !== undefined && init.body !== null) {
+    headers["content-type"] = headers["content-type"] ?? "application/json"
+  }
   const res = await invoke<ApiFetchResponse>("api_fetch", {
     args: {
       method: init?.method ?? "GET",
       path,
-      headers: init?.headers ?? {},
+      headers,
       body: init?.body ?? null,
     },
   })
   return {
     status: res.status,
     ok: res.status >= 200 && res.status < 300,
-    statusText: "",
+    statusText: STATUS_TEXT[res.status] ?? `HTTP ${res.status}`,
     bodyText: res.body,
   }
 }

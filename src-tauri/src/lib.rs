@@ -3,6 +3,8 @@ pub mod service;
 pub mod sse_pump;
 pub mod telemetry;
 
+use std::time::Duration;
+
 use tauri::{
     menu::{Menu, MenuItem, PredefinedMenuItem},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
@@ -22,7 +24,13 @@ fn show_main(app: &tauri::AppHandle) {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    let client = reqwest::Client::new();
+    // spec §3 timeouts live on the shared client: connect 5 s (per-request
+    // total timeout stays 30 s, set in api.rs — RequestBuilder has no
+    // connect_timeout)
+    let client = reqwest::Client::builder()
+        .connect_timeout(Duration::from_secs(5))
+        .build()
+        .expect("reqwest client");
     tauri::Builder::default()
         // single instance FIRST (spec §3 lib.rs target shape): a second
         // launch focuses the existing window instead of spawning a process

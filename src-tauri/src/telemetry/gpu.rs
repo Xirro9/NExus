@@ -378,11 +378,10 @@ impl GpuLoop {
                 let apps = parse_compute_apps(&String::from_utf8_lossy(&out.stdout));
                 self.shared.lock_flags().compute_apps = apps;
             }
-            Ok(out) => {
-                let mut flags = self.shared.lock_flags();
-                flags.gpu_ok = false;
-                flags.gpu_error =
-                    Some(format!("nvidia-smi compute-apps exited ({})", out.status));
+            Ok(_) => {
+                // parity with the TS reference: a non-zero compute-apps exit
+                // keeps the last good data silently — do NOT flip gpu_ok
+                // (the -l 2 stream failure path above stays as-is)
             }
             Err(err) if err.kind() == std::io::ErrorKind::NotFound => {
                 self.mark_unavailable("nvidia-smi not installed");

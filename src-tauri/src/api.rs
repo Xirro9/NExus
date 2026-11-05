@@ -28,13 +28,26 @@ pub struct ApiFetchResponse {
     pub body: String,
 }
 
+/// defense in depth: the client only ever sends /api paths. "/api" must be
+/// followed by '/', '?', or end-of-string (blocks "/apifoo"), and no path
+/// segment may be ".." (blocks "/api/../admin", which the server normalizes
+/// to "/admin" with the auth header still attached).
+fn is_allowed_path(path: &str) -> bool {
+    let Some(rest) = path.strip_prefix("/api") else {
+        return false;
+    };
+    if !(rest.is_empty() || rest.starts_with('/') || rest.starts_with('?')) {
+        return false;
+    }
+    !path.split(['/', '?']).any(|seg| seg == "..")
+}
+
 #[tauri::command]
 pub async fn api_fetch(
     client: tauri::State<'_, reqwest::Client>,
     args: ApiFetchArgs,
 ) -> Result<ApiFetchResponse, String> {
-    // defense in depth: the client only ever sends /api paths
-    if !args.path.starts_with("/api") {
+    if !is_allowed_path(&args.path) {
         return Err(format!("rejected non-/api path: {}", args.path));
     }
     let target = service::resolve().ok_or("opencode service.json unreadable")?;
@@ -66,10 +79,33 @@ pub async fn api_fetch(
 
 #[cfg(test)]
 mod tests {
+    use super::is_allowed_path;
+
     #[test]
     fn rejects_non_api_path() {
-        // mirror of the command guard without the tauri State plumbing
-        let path = "/etc/passwd";
-        assert!(!path.starts_with("/api"));
+        assert!(!is_allowed_path("/etc/passwd"));
+        assert!(!is_allowed_path(""));
+    }
+
+    #[test]
+    fn allows_api_paths() {
+        assert!(is_allowed_path("/api"));
+        assert!(is_allowed_path("/api/info"));
+        assert!(is_allowed_path("/api/session?limit=1&order=desc"));
+        assert!(is_allowed_path("/api/session/ses_x/message"));
+    }
+
+    #[test]
+    fn rejects_prefix_lookalikes_and_dot_escapes() {
+        // "/apifoo" must not pass the prefix check
+        assert!(!is_allowed_path("/apifoo"));
+        assert!(!is_allowed_path("/api/.."));
+        // server normalizes "/api/../admin" to "/admin" — auth would follow
+        assert!(!is_allowed_path("/api/../admin"));
+        assert!(!is_allowed_path("/api/session/../../admin"));
+        // ".." before a query string is also rejected
+        assert!(!is_allowed_path("/api/../x?a=b"));
+        // benign dots are fine
+        assert!(is_allowed_path("/api/session/ses_x.y/message"));
     }
 }

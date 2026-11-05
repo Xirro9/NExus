@@ -3,6 +3,7 @@
 //! light load, single-slot glm-server rule respected). Run explicitly:
 //!   cargo test --test commands_live -- --ignored --nocapture
 
+use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
@@ -84,6 +85,73 @@ fn api_fetch_info_roundtrip() {
     .expect_err("non-/api path must reject");
     assert!(err.contains("rejected non-/api path"), "{err}");
     println!("api_fetch guard ✔");
+}
+
+#[test]
+#[ignore]
+fn api_fetch_json_post_roundtrip() {
+    if !with_live() {
+        println!("SKIP: no service.json");
+        return;
+    }
+    let _ = resolve_or_skip();
+    let app = mock_app();
+    let state = app.state::<reqwest::Client>();
+
+    // B1 regression: JSON POST through the command. reqwest adds no
+    // Content-Type for .body(String), so the client-supplied header is the
+    // only one — without it every create/prompt/command POST breaks.
+    let ms = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .expect("clock")
+        .as_millis();
+    let title = format!("jerry-transport-test {ms}");
+    let body = serde_json::to_string(&json!({
+        "title": title,
+        "location": { "directory": env!("CARGO_MANIFEST_DIR") },
+    }))
+    .expect("serialize body");
+
+    let res = tauri::async_runtime::block_on(app_lib::api::api_fetch(
+        state.clone(),
+        ApiFetchArgs {
+            method: "POST".into(),
+            path: "/api/session".into(),
+            headers: HashMap::from([(
+                "content-type".to_string(),
+                "application/json".to_string(),
+            )]),
+            body: Some(body),
+        },
+    ))
+    .expect("POST /api/session must resolve");
+    assert_eq!(res.status, 200, "create failed: {}", res.body);
+    let created: serde_json::Value = serde_json::from_str(&res.body).expect("JSON envelope");
+    let id = created
+        .pointer("/data/id")
+        .and_then(|v| v.as_str())
+        .expect("session id in data envelope")
+        .to_string();
+    assert_eq!(
+        created.pointer("/data/title").and_then(|v| v.as_str()),
+        Some(title.as_str()),
+        "title must roundtrip through the POST body"
+    );
+    println!("created traceable session {id}");
+
+    // immediately clean up — the session is real
+    let res = tauri::async_runtime::block_on(app_lib::api::api_fetch(
+        state,
+        ApiFetchArgs {
+            method: "DELETE".into(),
+            path: format!("/api/session/{id}"),
+            headers: Default::default(),
+            body: None,
+        },
+    ))
+    .expect("DELETE must resolve");
+    assert_eq!(res.status, 204, "delete failed: {}", res.body);
+    println!("POST → DELETE roundtrip ✔ (session {id} removed)");
 }
 
 #[test]

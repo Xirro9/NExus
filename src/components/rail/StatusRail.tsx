@@ -3,10 +3,15 @@
 
 import { useIsBusy } from "@/store/selectors"
 import { useNexus } from "@/store/nexus"
+import { isTauri } from "@/lib/transport"
 import type { SessionInfo } from "@/lib/opencode/types"
-import { ShieldAlert } from "lucide-react"
+import { ShieldAlert, X } from "lucide-react"
+import { useState } from "react"
 import { AiCore, StaticCore } from "./AiCore"
 import { TelemetryMini } from "./TelemetryMini"
+
+// close-to-tray is undiscoverable — one-time subtle hint above the footer
+const TRAY_HINT_KEY = "nexus.trayHintDismissed"
 
 function fmt(n: number): string {
   if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + "M"
@@ -71,6 +76,11 @@ export function StatusRail({
   const url = useNexus((s) => s.connection.url)
   const offline = useNexus((s) => s.connection.status === "offline")
   const pendingPermissions = useNexus((s) => s.pendingPermissions)
+  // Tauri shell only (close-to-tray is a desktop behavior); dismissed flag in
+  // localStorage keeps it one-time
+  const [trayHintShown, setTrayHintShown] = useState(
+    () => isTauri() && localStorage.getItem(TRAY_HINT_KEY) === null,
+  )
 
   return (
     <div className="flex h-full flex-col gap-3 overflow-y-auto p-3">
@@ -131,6 +141,23 @@ export function StatusRail({
       </button>
 
       <TelemetryMini session={session} />
+
+      {trayHintShown && (
+        <div className="flex items-center justify-center gap-1.5 text-center font-mono text-[10px] text-muted-foreground/80">
+          <span>Closing minimizes Jerry to the tray</span>
+          <button
+            type="button"
+            onClick={() => {
+              localStorage.setItem(TRAY_HINT_KEY, "1")
+              setTrayHintShown(false)
+            }}
+            className="rounded p-0.5 transition-colors hover:text-foreground"
+            aria-label="Dismiss close-to-tray hint"
+          >
+            <X className="size-3" aria-hidden />
+          </button>
+        </div>
+      )}
 
       <div className="mt-auto pt-3 text-center font-mono text-[10px] text-muted-foreground/80">
         nexus · phase 3
