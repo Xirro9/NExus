@@ -49,6 +49,7 @@ export function AiCore({ state }: { state: "idle" | "thinking" }) {
       />
       <motion.div
         className="absolute inset-12 rounded-full bg-primary/70"
+        style={{ boxShadow: "0 0 16px oklch(0.82 0.16 195 / 0.45)" }}
         animate={{ scale: thinking ? [1, 1.3, 1] : [1, 1.12, 1] }}
         transition={{ duration: breathe, repeat: Infinity, ease: "easeInOut" }}
       />
@@ -69,7 +70,10 @@ function StaticCore({ dim }: { dim: boolean }) {
       />
       <div className="absolute inset-3 rounded-full border-2 border-primary/60" />
       <div className="absolute inset-7 rounded-full border border-accent/50" />
-      <div className="absolute inset-12 rounded-full bg-primary/70" />
+      <div
+        className="absolute inset-12 rounded-full bg-primary/70"
+        style={{ boxShadow: "0 0 16px oklch(0.82 0.16 195 / 0.45)" }}
+      />
     </div>
   )
 }

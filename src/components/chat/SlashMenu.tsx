@@ -65,7 +65,7 @@ export const SlashMenu = forwardRef<
 
   return (
     <div
-      className="absolute bottom-full left-0 z-10 mb-2 max-h-64 w-80 overflow-y-auto rounded-xl border border-border bg-popover p-1 shadow-[var(--glow-accent)]"
+      className="absolute bottom-full left-0 z-10 mb-2 max-h-64 w-80 overflow-y-auto rounded-xl border border-border bg-popover p-1.5 shadow-[var(--glow-accent)]"
       role="listbox"
       aria-label="Slash commands"
     >
@@ -81,8 +81,8 @@ export const SlashMenu = forwardRef<
             onClose()
           }}
           className={
-            "block w-full rounded-lg px-2.5 py-1.5 text-left " +
-            (i === selectedIndex ? "bg-secondary" : "")
+            "block w-full rounded-lg px-2.5 py-1.5 text-left transition-colors duration-100 " +
+            (i === selectedIndex ? "bg-secondary" : "hover:bg-secondary/50")
           }
         >
           <span className="font-mono text-xs text-foreground">/{cmd.name}</span>

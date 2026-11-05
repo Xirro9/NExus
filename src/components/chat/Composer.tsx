@@ -1,11 +1,13 @@
 // Textarea composer: Enter = send, Shift+Enter = newline, slash detection,
 // busy swaps send → interrupt (§8). Slash commands route to the store.
 
-import { useRef, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 
 import { useNexus } from "@/store/nexus"
 import { SendHorizontal, Square } from "lucide-react"
 import { SlashMenu, type SlashMenuHandle } from "./SlashMenu"
+
+const MAX_TEXTAREA_PX = 160 // matches max-h-40
 
 export function Composer({
   disabled,
@@ -26,6 +28,14 @@ export function Composer({
   // "/" followed by an identifier → menu open
   const slashMatch = /^\/([a-zA-Z0-9_-]*)(?:\s(.*))?$/s.exec(value)
   const menuOpen = slashMatch !== null && !value.includes("\n")
+
+  // auto-grow up to max-h
+  useEffect(() => {
+    const el = textRef.current
+    if (!el) return
+    el.style.height = "auto"
+    el.style.height = Math.min(el.scrollHeight, MAX_TEXTAREA_PX) + "px"
+  }, [value])
 
   const send = () => {
     const text = value.trim()
@@ -61,7 +71,7 @@ export function Composer({
           onClose={() => setValue("")}
         />
       )}
-      <div className="flex items-end gap-2 rounded-xl border border-border bg-card p-2 focus-within:shadow-[var(--glow-primary)]">
+      <div className="flex items-end gap-2 rounded-xl border border-border bg-card p-2 transition-colors duration-150 focus-within:border-ring/40 focus-within:shadow-[var(--glow-primary)]">
         <textarea
           ref={textRef}
           value={value}
@@ -102,20 +112,25 @@ export function Composer({
           <button
             type="button"
             onClick={onInterrupt}
-            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-destructive/50 text-destructive transition-colors hover:bg-destructive/10"
+            className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg border border-destructive/50 text-destructive transition-colors duration-150 hover:bg-destructive/10 active:scale-95"
             aria-label="Interrupt"
           >
-            <Square className="h-4 w-4" aria-hidden />
+            <Square className="size-4" aria-hidden />
           </button>
         ) : (
           <button
             type="button"
             onClick={send}
             disabled={disabled || value.trim() === ""}
-            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-40"
+            className={
+              "inline-flex size-9 shrink-0 items-center justify-center rounded-lg transition-all duration-150 active:scale-95 disabled:opacity-40 " +
+              (disabled || value.trim() === ""
+                ? "bg-primary text-primary-foreground"
+                : "bg-primary text-primary-foreground shadow-[var(--glow-primary)] hover:bg-primary/90")
+            }
             aria-label="Send"
           >
-            <SendHorizontal className="h-4 w-4" aria-hidden />
+            <SendHorizontal className="size-4" aria-hidden />
           </button>
         )}
       </div>

@@ -38,7 +38,7 @@ function TextBody({
         chunk.code ? (
           <pre
             key={i}
-            className="my-1.5 overflow-x-auto rounded-lg border border-border bg-muted/60 p-2.5 font-mono text-xs leading-relaxed"
+            className="my-2 overflow-x-auto rounded-lg border border-border/70 bg-muted/70 p-3 font-mono text-xs leading-relaxed"
           >
             {chunk.content.replace(/\n$/, "")}
           </pre>
@@ -62,7 +62,7 @@ function AssistantParts({
   // cursor attaches to the last part while streaming
   const lastIncomplete = streaming ? parts.length - 1 : -1
   return (
-    <div className="flex flex-col gap-1.5">
+    <div className="flex flex-col gap-2">
       {parts.map((part, i) => {
         const cursor = i === lastIncomplete
         if (part.type === "reasoning") {
@@ -88,14 +88,14 @@ export function MessageBubble({ message }: { message: ChatMessage }) {
     if (text === "") {
       // slash-command invocations arrive as user messages with no text part
       return (
-        <div className="text-center font-mono text-[11px] text-muted-foreground/70">
+        <div className="text-center font-mono text-[11px] text-muted-foreground/80">
           [/command]
         </div>
       )
     }
     return (
       <div className="flex justify-end">
-        <div className="max-w-[85%] rounded-xl bg-secondary px-3.5 py-2 text-secondary-foreground">
+        <div className="max-w-[85%] rounded-xl rounded-br-sm bg-secondary px-4 py-2.5 text-secondary-foreground shadow-sm shadow-black/20">
           <div className="whitespace-pre-wrap">{text}</div>
         </div>
       </div>
@@ -105,7 +105,7 @@ export function MessageBubble({ message }: { message: ChatMessage }) {
   if (message.role === "assistant") {
     return (
       <div className="flex justify-start">
-        <div className="max-w-[85%] rounded-xl border border-border px-3.5 py-2">
+        <div className="max-w-[85%] rounded-xl rounded-bl-sm border border-border/70 bg-card/40 px-4 py-2.5">
           <AssistantParts parts={message.parts} streaming={message.streaming === true} />
         </div>
       </div>
@@ -118,7 +118,7 @@ export function MessageBubble({ message }: { message: ChatMessage }) {
     .map((p) => p.text)
     .join(" ")
   return (
-    <div className="text-center font-mono text-[11px] text-muted-foreground/70">
+    <div className="px-6 text-center font-mono text-[11px] text-muted-foreground/80">
       [{message.role}
       {line ? `: ${line}` : ""}]
     </div>

@@ -2,6 +2,7 @@
 // Store-driven; no props (§8).
 
 import { useMemo } from "react"
+import { Folder, Plus } from "lucide-react"
 
 import { useNexus } from "@/store/nexus"
 import { useStatus } from "@/store/selectors"
@@ -32,50 +33,76 @@ export function Sidebar() {
   return (
     <aside className="flex min-h-0 flex-col border-r border-border bg-sidebar text-sidebar-foreground">
       {/* brand row */}
-      <div className="flex items-center justify-between px-4 py-3">
-        <span className="text-lg font-semibold tracking-tight">
-          Nexus
+      <div className="flex items-center justify-between gap-2 px-4 pt-3.5 pb-3">
+        <span className="flex items-center gap-2.5">
+          <span
+            className="size-2 rounded-full bg-primary shadow-[var(--glow-primary)]"
+            aria-hidden
+          />
+          <span className="text-[17px] leading-none font-semibold tracking-tight">
+            Nexus
+          </span>
         </span>
         <ConnectionBadge status={status} version={version} />
       </div>
 
-      <div className="px-3 pb-2">
+      <div className="px-3 pb-3">
         <button
           type="button"
           onClick={() => void newSession()}
-          className="w-full rounded-xl bg-primary px-3 py-2 text-sm font-medium text-primary-foreground shadow-[var(--glow-primary)] transition-colors hover:opacity-90"
+          className="inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-lg bg-primary px-3 text-sm font-medium text-primary-foreground shadow-[var(--glow-primary)] transition-all duration-150 hover:bg-primary/90 active:scale-[0.98]"
         >
-          + New session
+          <Plus className="size-4" aria-hidden />
+          New session
         </button>
       </div>
 
       {/* project filter */}
-      <div className="px-3 pb-2">
-        <select
-          value={activeProjectId ?? ""}
-          onChange={(e) =>
-            useNexus.setState({
-              activeProjectId: e.target.value === "" ? null : e.target.value,
-            })
-          }
-          className="w-full rounded-lg border border-border bg-input px-2 py-1.5 text-xs text-foreground"
-          aria-label="Filter sessions by project"
-        >
-          <option value="">All projects</option>
-          {projects.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.canonical}
-            </option>
-          ))}
-        </select>
+      <div className="px-3 pb-3">
+        <label className="flex items-center gap-2 rounded-lg border border-border bg-input/60 px-2.5 py-1.5 transition-colors hover:border-muted-foreground/30">
+          <Folder
+            className="size-3.5 shrink-0 text-muted-foreground"
+            aria-hidden
+          />
+          <select
+            value={activeProjectId ?? ""}
+            onChange={(e) =>
+              useNexus.setState({
+                activeProjectId: e.target.value === "" ? null : e.target.value,
+              })
+            }
+            className="w-full cursor-pointer truncate bg-transparent text-xs text-foreground"
+            aria-label="Filter sessions by project"
+          >
+            <option value="">All projects</option>
+            {projects.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.canonical}
+              </option>
+            ))}
+          </select>
+        </label>
       </div>
 
       {/* session list */}
+      <div className="flex items-baseline justify-between px-4 pt-1 pb-1.5">
+        <h2 className="text-[11px] font-medium tracking-wider text-muted-foreground uppercase">
+          Sessions
+        </h2>
+        <span className="font-mono text-[10px] text-muted-foreground/80">
+          {filtered.length}
+        </span>
+      </div>
       <nav className="min-h-0 flex-1 overflow-y-auto px-2 pb-3" aria-label="Sessions">
         {filtered.length === 0 ? (
-          <p className="px-2 py-4 text-xs text-muted-foreground">
-            No sessions yet.
-          </p>
+          <div className="rounded-lg border border-dashed border-border/70 px-3 py-6 text-center">
+            <p className="text-xs text-muted-foreground">
+              {activeProjectId ? "No sessions in this project." : "No sessions yet."}
+            </p>
+            <p className="mt-1 text-[11px] text-muted-foreground/80">
+              Create one with “New session”.
+            </p>
+          </div>
         ) : (
           <ul className="space-y-0.5">
             {filtered.map((session) => (

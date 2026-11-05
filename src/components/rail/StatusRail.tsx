@@ -16,8 +16,8 @@ function fmt(n: number): string {
 function TokenBlock({ session }: { session: SessionInfo }) {
   const t = session.tokens
   return (
-    <div className="rounded-xl border border-border bg-card p-3">
-      <h3 className="mb-2 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+    <div className="rounded-xl border border-border/70 bg-card p-3">
+      <h3 className="mb-2.5 text-[11px] font-semibold tracking-wider text-muted-foreground uppercase">
         Session
       </h3>
       <dl className="space-y-1 font-mono text-xs">
@@ -39,9 +39,11 @@ function TokenBlock({ session }: { session: SessionInfo }) {
             {fmt(t.cache.read)} / {fmt(t.cache.write)}
           </dd>
         </div>
-        <div className="flex justify-between border-t border-border pt-1">
+        <div className="flex justify-between border-t border-border/70 pt-1.5">
           <dt className="text-muted-foreground">cost</dt>
-          <dd>${session.cost.toFixed(4)}</dd>
+          <dd className="font-medium text-foreground">
+            ${session.cost.toFixed(4)}
+          </dd>
         </div>
       </dl>
     </div>
@@ -59,7 +61,7 @@ export function StatusRail({ session }: { session: SessionInfo | null }) {
 
   return (
     <div className="flex h-full flex-col gap-3 overflow-y-auto p-3">
-      <div className="flex items-center justify-center py-2">
+      <div className="flex items-center justify-center py-3">
         {offline ? (
           <StaticCore dim />
         ) : (
@@ -70,13 +72,13 @@ export function StatusRail({ session }: { session: SessionInfo | null }) {
       {session ? (
         <TokenBlock session={session} />
       ) : (
-        <div className="rounded-xl border border-border bg-card p-3 text-xs text-muted-foreground">
+        <div className="rounded-xl border border-dashed border-border/70 bg-card/40 p-3 text-xs text-muted-foreground">
           No active session.
         </div>
       )}
 
-      <div className="rounded-xl border border-border bg-card p-3">
-        <h3 className="mb-2 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+      <div className="rounded-xl border border-border/70 bg-card p-3">
+        <h3 className="mb-2.5 text-[11px] font-semibold tracking-wider text-muted-foreground uppercase">
           Server
         </h3>
         <dl className="space-y-1 font-mono text-xs">
@@ -104,7 +106,7 @@ export function StatusRail({ session }: { session: SessionInfo | null }) {
         </div>
       )}
 
-      <div className="mt-auto text-center font-mono text-[10px] text-muted-foreground/60">
+      <div className="mt-auto pt-3 text-center font-mono text-[10px] text-muted-foreground/80">
         nexus · phase 1
       </div>
     </div>

@@ -1,7 +1,8 @@
 // Scroll container with pin-to-bottom + "new activity" pill (§8).
+// New messages rise in subtly (skipped under prefers-reduced-motion).
 
 import { useCallback, useEffect, useRef, useState } from "react"
-
+import { motion, useReducedMotion } from "motion/react"
 import type { ChatMessage } from "@/lib/opencode/types"
 import { ArrowDown } from "lucide-react"
 import { MessageBubble } from "./MessageBubble"
@@ -12,6 +13,7 @@ export function MessageList({ messages }: { messages: ChatMessage[] }) {
   const scrollRef = useRef<HTMLDivElement>(null)
   const pinnedRef = useRef(true)
   const [showJump, setShowJump] = useState(false)
+  const reduced = useReducedMotion()
 
   const scrollToBottom = useCallback((smooth = false) => {
     const el = scrollRef.current
@@ -39,16 +41,26 @@ export function MessageList({ messages }: { messages: ChatMessage[] }) {
       <div
         ref={scrollRef}
         onScroll={onScroll}
-        className="h-full overflow-y-auto px-4 py-4"
+        className="h-full overflow-y-auto px-4 py-5"
       >
         {messages.length === 0 ? (
-          <p className="py-10 text-center text-sm text-muted-foreground">
-            No messages yet — say something below.
-          </p>
+          <div className="flex h-full items-center justify-center">
+            <p className="text-sm text-muted-foreground/80">
+              No messages yet — say something below.
+            </p>
+          </div>
         ) : (
-          <div className="mx-auto flex max-w-3xl flex-col gap-3">
-            {messages.map((m) => (
-              <MessageBubble key={m.id} message={m} />
+          <div className="mx-auto flex max-w-3xl flex-col gap-3.5 pb-1">
+            {messages.map((m, i) => (
+              // only the newest bubble animates — no mass entrance on session switch
+              <motion.div
+                key={m.id}
+                initial={i === messages.length - 1 && !reduced ? { opacity: 0, y: 6 } : false}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.22, ease: "easeOut" }}
+              >
+                <MessageBubble message={m} />
+              </motion.div>
             ))}
           </div>
         )}
@@ -61,10 +73,10 @@ export function MessageList({ messages }: { messages: ChatMessage[] }) {
             setShowJump(false)
             scrollToBottom(true)
           }}
-          className="absolute bottom-4 left-1/2 flex -translate-x-1/2 items-center gap-1.5 rounded-full border border-border bg-popover px-3 py-1.5 text-xs text-foreground shadow-[var(--glow-primary)]"
+          className="absolute bottom-4 left-1/2 flex -translate-x-1/2 items-center gap-1.5 rounded-full border border-border bg-popover px-3 py-1.5 text-xs font-medium text-foreground shadow-lg shadow-black/30 transition-colors hover:border-primary/40"
         >
-          <ArrowDown className="h-3.5 w-3.5" aria-hidden />
-          new activity
+          <ArrowDown className="size-3.5 text-primary" aria-hidden />
+          Jump to latest
         </button>
       )}
     </div>

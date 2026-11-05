@@ -105,14 +105,60 @@
   * {
     @apply border-border outline-ring/50;
     }
+  html {
+    @apply font-sans antialiased;
+    }
   body {
     @apply bg-background text-foreground;
     /* readability-first chat body: 14px / 1.6 */
     font-size: 0.875rem;
     line-height: 1.6;
+    /* depth without noise: a single faint cyan wash bleeding in from the top */
+    background-image: radial-gradient(
+      1100px 480px at 50% -120px,
+      oklch(0.82 0.16 195 / 0.045),
+      transparent 65%
+    );
+    background-attachment: fixed;
     }
-  html {
-    @apply font-sans antialiased;
+
+  /* visible keyboard focus everywhere (shadcn Button has its own ring) */
+  :where(a, button, select, textarea, input, [role="option"]):focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+    }
+
+  /* themed browser surfaces — selection, caret, scrollbars, numerals */
+  ::selection {
+    background: oklch(0.82 0.16 195 / 0.28);
+    }
+  textarea,
+  input {
+    caret-color: var(--primary);
+    }
+  .font-mono {
+    font-variant-numeric: tabular-nums;
+    }
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: oklch(0.35 0.02 265) transparent;
+    }
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+    }
+  ::-webkit-scrollbar-thumb {
+    background: oklch(0.32 0.02 265);
+    border-radius: 9999px;
+    border: 2px solid transparent;
+    background-clip: padding-box;
+    }
+  ::-webkit-scrollbar-thumb:hover {
+    background: oklch(0.42 0.025 265);
+    background-clip: padding-box;
+    }
+  ::-webkit-scrollbar-corner {
+    background: transparent;
     }
 }
 
@@ -128,8 +174,32 @@
   animation: nexus-cursor 1s steps(1) infinite;
 }
 
+/* animated ellipsis for running tool chips (§8) */
+@keyframes nexus-dots {
+  0% { content: ""; }
+  25% { content: "."; }
+  50% { content: ".."; }
+  75%, 100% { content: "…"; }
+}
+.nexus-dots::after {
+  content: "…";
+  animation: nexus-dots 1.2s steps(1) infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .nexus-cursor::after {
     animation: none;
+  }
+  .nexus-dots::after {
+    animation: none;
+    content: "…";
+  }
+  /* hard clamp for any remaining CSS animation (animate-pulse etc.) */
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }

@@ -28,26 +28,26 @@ export function ReasoningBlock({
   }, [completed])
 
   return (
-    <div className="border-l-2 border-accent/50 pl-2.5">
+    <div className="border-l-2 border-accent/40 pl-3">
       <button
         type="button"
         onClick={() => {
           manual.current = true
           setOpen((o) => !o)
         }}
-        className="flex items-center gap-1 text-xs italic text-muted-foreground hover:text-foreground"
+        className="flex items-center gap-1 rounded text-xs italic text-muted-foreground transition-colors duration-150 hover:text-foreground"
         aria-expanded={open}
       >
         <ChevronRight
           className={
-            "h-3 w-3 transition-transform duration-150 " + (open ? "rotate-90" : "")
+            "size-3 transition-transform duration-150 " + (open ? "rotate-90" : "")
           }
           aria-hidden
         />
         {completed ? "Reasoned" : "Reasoning…"}
       </button>
       {open && (
-        <p className="mt-1 text-[13px] italic whitespace-pre-wrap text-muted-foreground">
+        <p className="mt-1.5 text-[13px] leading-relaxed italic whitespace-pre-wrap text-muted-foreground">
           {part.text}
         </p>
       )}

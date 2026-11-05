@@ -8,22 +8,22 @@ import { Check, ChevronRight, Terminal, TriangleAlert, Wrench } from "lucide-rea
 function StatusChip({ status }: { status: string }) {
   if (status === "running") {
     return (
-      <span className="rounded-full border border-primary/40 px-1.5 py-0.5 font-mono text-[10px] text-primary">
-        running…
+      <span className="nexus-dots rounded-full border border-primary/40 px-1.5 py-0.5 font-mono text-[10px] text-primary">
+        running
       </span>
     )
   }
   if (status === "completed") {
     return (
       <span className="inline-flex items-center gap-1 rounded-full border border-success/40 px-1.5 py-0.5 font-mono text-[10px] text-success">
-        <Check className="h-2.5 w-2.5" aria-hidden /> done
+        <Check className="size-2.5" aria-hidden /> done
       </span>
     )
   }
   if (status === "failed") {
     return (
       <span className="inline-flex items-center gap-1 rounded-full border border-destructive/40 px-1.5 py-0.5 font-mono text-[10px] text-destructive">
-        <TriangleAlert className="h-2.5 w-2.5" aria-hidden /> failed
+        <TriangleAlert className="size-2.5" aria-hidden /> failed
       </span>
     )
   }
@@ -41,35 +41,35 @@ export function ToolPartCard({ part }: { part: ToolPart }) {
       ? Terminal
       : Wrench
   return (
-    <div className="rounded-lg border border-border bg-muted/40">
+    <div className="overflow-hidden rounded-lg border border-border/70 bg-muted/40">
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="flex w-full items-center gap-2 px-2.5 py-1.5 text-left"
+        className="flex w-full items-center gap-2 px-2.5 py-1.5 text-left transition-colors duration-150 hover:bg-muted/70"
         aria-expanded={open}
       >
         <ChevronRight
           className={
-            "h-3 w-3 shrink-0 text-muted-foreground transition-transform duration-150 " +
+            "size-3 shrink-0 text-muted-foreground transition-transform duration-150 " +
             (open ? "rotate-90" : "")
           }
           aria-hidden
         />
-        <Icon className="h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-hidden />
+        <Icon className="size-3.5 shrink-0 text-muted-foreground" aria-hidden />
         <span className="min-w-0 flex-1 truncate font-mono text-xs">
           {part.name}
         </span>
         <StatusChip status={part.state.status} />
       </button>
       {open && (
-        <div className="space-y-1.5 px-2.5 pb-2.5">
+        <div className="space-y-2 px-2.5 pb-2.5">
           {part.state.input !== undefined && (
-            <pre className="max-h-48 overflow-auto rounded-md bg-background/60 p-2 font-mono text-[11px] leading-relaxed text-muted-foreground">
+            <pre className="max-h-48 overflow-auto rounded-md border border-border/50 bg-background/60 p-2.5 font-mono text-[11px] leading-relaxed text-muted-foreground">
               {JSON.stringify(part.state.input, null, 2)}
             </pre>
           )}
           {part.state.output !== undefined && (
-            <pre className="max-h-64 overflow-auto rounded-md bg-background/60 p-2 font-mono text-[11px] leading-relaxed text-muted-foreground">
+            <pre className="max-h-64 overflow-auto rounded-md border border-border/50 bg-background/60 p-2.5 font-mono text-[11px] leading-relaxed text-muted-foreground">
               {JSON.stringify(part.state.output, null, 2)}
             </pre>
           )}

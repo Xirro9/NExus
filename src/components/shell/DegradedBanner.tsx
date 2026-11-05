@@ -2,6 +2,7 @@
 
 import { useNexus } from "@/store/nexus"
 import type { ConnectionStatus } from "@/lib/opencode/types"
+import { RotateCw, TriangleAlert } from "lucide-react"
 
 const MESSAGES: Record<ConnectionStatus, string> = {
   connecting: "Connecting to OpenCode service…",
@@ -13,12 +14,23 @@ const MESSAGES: Record<ConnectionStatus, string> = {
 export function DegradedBanner({ status }: { status: ConnectionStatus }) {
   const resync = useNexus((s) => s.resync)
   return (
-    <div className="flex items-center justify-center gap-3 border-b border-warning/30 bg-warning/10 px-4 py-1.5 text-xs text-warning">
+    <div
+      role="status"
+      className="flex items-center justify-center gap-2.5 border-b border-warning/25 bg-warning/10 px-4 py-1.5 text-xs text-warning"
+    >
+      {status === "offline" ? (
+        <TriangleAlert className="size-3.5 shrink-0" aria-hidden />
+      ) : (
+        <RotateCw
+          className="size-3.5 shrink-0 animate-spin [animation-duration:2.5s]"
+          aria-hidden
+        />
+      )}
       <span>{MESSAGES[status]}</span>
       <button
         type="button"
         onClick={() => void resync()}
-        className="rounded-full border border-warning/40 px-2 py-0.5 font-mono hover:bg-warning/20"
+        className="rounded-full border border-warning/40 px-2 py-0.5 font-mono text-[11px] transition-colors hover:bg-warning/20"
       >
         retry
       </button>

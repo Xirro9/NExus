@@ -26,19 +26,19 @@ export function ConnectionBadge({
   return (
     <span
       className={
-        "inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-xs " +
+        "inline-flex shrink-0 items-center gap-1.5 rounded-full border px-2 py-0.5 text-[11px] leading-none whitespace-nowrap " +
         styles[status]
       }
     >
       <span
         className={
-          "h-1.5 w-1.5 rounded-full bg-current " + (pulse ? "animate-pulse" : "")
+          "size-1.5 rounded-full bg-current " + (pulse ? "animate-pulse" : "")
         }
         aria-hidden
       />
       {LABELS[status]}
       {status === "online" && version && (
-        <span className="font-mono text-[10px] opacity-70">v{version}</span>
+        <span className="font-mono text-[10px] opacity-80">v{version}</span>
       )}
     </span>
   )
