@@ -130,7 +130,9 @@ export function Sidebar() {
         {roots.length + orphans.length === 0 ? (
           <div className="rounded-lg border border-dashed border-border/70 px-3 py-6 text-center">
             <p className="text-xs text-muted-foreground">
-              {activeProjectId ? "No sessions in this project." : "No sessions yet."}
+              {activeProjectId
+                ? "No sessions in this project."
+                : "No sessions yet — start a new chat with Jerry."}
             </p>
             <p className="mt-1 text-[11px] text-muted-foreground/80">
               Create one with “New session”.

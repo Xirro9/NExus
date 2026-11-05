@@ -1,11 +1,74 @@
-# Jerry (repo: OpenCode Nexus)
+<div align="center">
 
-Premium AI desktop dashboard for the local OpenCode install. Product name is
-**Jerry** (2026-11-05 operator decision); the repo/GitHub stay "NExus". Tauri
-identifier: `com.xirro9.jerry`. Phases 1–4 implemented — see `docs/PLAN.md`
-and `docs/SPEC-PHASE{1..4}.md`.
+# ✦ JERRY ✦
 
-### Dev proxy & auth (Phase 1)
+### Your machine, with a voice
+
+**A premium AI desktop command center for the local [OpenCode](https://opencode.ai) harness.**
+One window for your sessions, agents, tokens, cost, and the metal underneath — GPU, CPU, RAM, all live.
+
+Product name **Jerry** (2026-11-05) · repo stays **NExus** · Tauri id `com.xirro9.jerry`
+
+![Tauri](https://img.shields.io/badge/Tauri-2-24C8DB?logo=tauri&logoColor=white)
+![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black)
+![TypeScript](https://img.shields.io/badge/TypeScript-7-3178C6?logo=typescript&logoColor=white)
+![Tailwind](https://img.shields.io/badge/Tailwind-4-06B6D4?logo=tailwindcss&logoColor=white)
+![Platform](https://img.shields.io/badge/platform-Linux-black?logo=linux&logoColor=white)
+![Status](https://img.shields.io/badge/status-v0.1.0-shipped-brightgreen)
+
+</div>
+
+---
+
+## 🚀 Launch Jerry
+
+```bash
+jerry          # detached launch — an already-running Jerry is focused instead
+jerry --fg     # foreground, logs in the terminal
+```
+
+Install the terminal call:
+
+```bash
+cp bin/jerry ~/.local/bin/jerry && chmod +x ~/.local/bin/jerry
+```
+
+The launcher looks for the AppImage at
+`src-tauri/target/release/bundle/appimage/Jerry_0.1.0_amd64.AppImage`
+(override with the `JERRY_APP` env var). Desktop entries and a tray icon
+(Show / Hide / Quit) ship alongside — closing the window hides Jerry to the
+tray while sessions and telemetry keep running.
+
+## 💬 Talking to Jerry
+
+| You do | Jerry says |
+| --- | --- |
+| Open the composer | *"Talk to Jerry… (/ for commands)"* |
+| Send a prompt | *"Jerry is thinking…"* |
+| Launch cold | *"Waking Jerry…"* |
+| Connection drops | *"Jerry is unreachable — retrying"* |
+
+Everything routes to **your local llama.cpp server** — no outside LLM APIs,
+no hosted fallbacks, no telemetry leaving the box.
+
+## ✨ What's inside
+
+- **Sessions & chat** — full markdown chat, slash commands, reasoning blocks,
+  per-message token & cost accounting, live SSE streaming.
+- **Agent graph** — sessions and subagents rendered as a live React Flow graph.
+- **Dashboard** — GPU / CPU / RAM / load rings, llama-server health, token and
+  cost usage over time (Recharts).
+- **History & projects** — searchable session history grouped by project.
+- **System panel** — MCP server status and persistent memory viewers.
+
+## 🏗️ Architecture (the interesting part)
+
+> Jerry is a UI over the local OpenCode harness; the repo keeps the name NExus.
+> Phases 1–4 are implemented — see [`docs/PLAN.md`](docs/PLAN.md) and
+> [`docs/SPEC-PHASE{1..4}.md`](docs/).
+
+<details>
+<summary><b>🔐 Dev proxy & auth (Phase 1)</b></summary>
 
 `npm run dev` proxies `/api/*` to the local OpenCode service, injecting HTTP
 Basic auth read server-side from `~/.local/state/opencode/service.json`. The
@@ -14,7 +77,10 @@ boot** — if the service restarts on a *different port*, restart the dev server
 a password rotation self-heals on the next request (mtime-cached re-read).
 Never bypass the proxy: `EventSource` cannot set auth headers itself.
 
-### Tauri shell & the transport seam (Phase 4)
+</details>
+
+<details>
+<summary><b>🐚 Tauri shell & the transport seam (Phase 4)</b></summary>
 
 Inside the desktop shell (`npm run tauri dev` / the packaged app), the same
 client code talks through a `Transport` seam (`src/lib/transport/`) instead of
@@ -32,10 +98,12 @@ The llama-server target is resolved once at app boot from `NEXUS_LLM_URL`
 before launching the app if the container IP changes.
 
 Desktop conveniences: window state restore, single-instance focus, tray
-(Show/Hide/Quit), and close-to-tray (the window hides; Quit lives in the
-tray — telemetry + SSE keep running while hidden).
+(Show/Hide/Quit), and close-to-tray (telemetry + SSE keep running while hidden).
 
-### Telemetry middleware (Phase 2)
+</details>
+
+<details>
+<summary><b>📈 Telemetry middleware (Phase 2)</b></summary>
 
 A Vite plugin (`src/server/telemetry.ts`) serves origin-relative
 `/telemetry/snapshot` + `/telemetry/llm` JSON: CPU/RAM/load from `/proc`, GPU
@@ -47,7 +115,9 @@ and restart the dev server. Recovery after a llama container restart is
 automatic (5 s health probe). Dev-server restarts wipe the ~10 min sample
 rings; panels show an honest "warming up" state until they refill.
 
-## Stack (installed & verified)
+</details>
+
+## 🧰 Stack (installed & verified)
 
 | Layer | Package | Version |
 | --- | --- | --- |
@@ -60,7 +130,7 @@ rings; panels show an honest "warming up" state until they refill.
 | Charts | Recharts | 3.10.x |
 | Icons | Lucide (`lucide-react`) | 1.68.x |
 
-## Commands
+## ⌨️ Developer commands
 
 ```bash
 npm run dev          # Vite dev server (port 1420, fixed — Tauri dev URL)
@@ -70,31 +140,29 @@ npm run tauri build  # deb + AppImage under src-tauri/target/release/bundle/
 node scripts/gen-icons.mjs   # regenerate src-tauri/icons/*.png (dependency-free)
 ```
 
-## Adding shadcn components
+Component registries:
 
 ```bash
-npx shadcn@latest add <component>
+npx shadcn@latest add <component>                                        # shadcn/ui
+npx shadcn@latest add "https://reactbits.dev/r/default/<Name>-TS-CSS"    # React Bits
 ```
 
-## Adding React Bits components
+Browse React Bits at [reactbits.dev](https://reactbits.dev).
 
-React Bits ships as a shadcn-compatible registry (no npm package). With the
-style you want, e.g. `default`:
+## 📦 System deps
 
-```bash
-npx shadcn@latest add "https://reactbits.dev/r/default/<ComponentName>-TS-CSS"
-```
+Linux webview dev packages (webkit2gtk-4.1, rsvg, appindicator) are installed —
+`npm run tauri dev` works out of the box. Rust toolchain via rustup at `~/.cargo`.
 
-Browse components at https://reactbits.dev.
-
-## Tauri system deps (installed 2026-11-05)
-
-The Linux webview dev packages are installed; `npm run tauri dev` works.
-Rust toolchain: `~/.cargo` (rustup, stable).
-
-## Agent tooling (scoped to this project)
+## 🤖 Agent tooling (scoped to this project)
 
 - `opencode.json` — project MCPs: `shadcn`, `chrome-devtools`, `context7`
   (Playwright and Motion are global; Motion MCP is hosted at mcp.motion.dev).
 - Global skills apply here: `impeccable`, `motion`, `vercel-react-best-practices`,
   `web-design-guidelines` (see `~/.config/opencode/skills/.usage.json`).
+
+---
+
+<div align="center">
+<sub><b>Jerry</b> — built on the OpenCode harness · NExus repo · v0.1.0</sub>
+</div>

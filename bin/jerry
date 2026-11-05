@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+# jerry — launch the Jerry desktop app (NExus UI over the local opencode harness)
+#
+#   jerry          launch detached (existing instance is focused via single-instance)
+#   jerry --fg     run in the foreground (logs to the terminal)
+#
+# Install:  cp bin/jerry ~/.local/bin/jerry && chmod +x ~/.local/bin/jerry
+#           (adjust APP below if your bundle lives elsewhere)
+
+APP="${JERRY_APP:-$HOME/ai-workbench/projects/NExus/src-tauri/target/release/bundle/appimage/Jerry_0.1.0_amd64.AppImage}"
+
+if [ ! -x "$APP" ]; then
+  echo "jerry: app image not found at $APP" >&2
+  echo "jerry: build it with  cd ~/ai-workbench/projects/NExus && npm run tauri build" >&2
+  echo "jerry: or point JERRY_APP at an existing bundle" >&2
+  exit 1
+fi
+
+if [ "$1" = "--fg" ]; then
+  shift
+  exec "$APP" "$@"
+fi
+
+nohup "$APP" "$@" >/dev/null 2>&1 &
+disown
+echo "jerry: launched (pid $!)"

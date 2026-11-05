@@ -5,10 +5,10 @@ import type { ConnectionStatus } from "@/lib/opencode/types"
 import { RotateCw, TriangleAlert } from "lucide-react"
 
 const MESSAGES: Record<ConnectionStatus, string> = {
-  connecting: "Connecting to OpenCode service…",
+  connecting: "Waking Jerry…",
   online: "", // banner is not rendered when online
-  reconnecting: "Connection lost — reconnecting…",
-  offline: "OpenCode service unreachable — retrying",
+  reconnecting: "Connection lost — waking Jerry back up…",
+  offline: "Jerry is unreachable — retrying",
 }
 
 export function DegradedBanner({ status }: { status: ConnectionStatus }) {

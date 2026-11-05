@@ -46,7 +46,7 @@ export function MessageList({ messages }: { messages: ChatMessage[] }) {
         {messages.length === 0 ? (
           <div className="flex h-full items-center justify-center">
             <p className="text-sm text-muted-foreground/80">
-              No messages yet — say something below.
+              Nothing here yet — say hi to Jerry.
             </p>
           </div>
         ) : (

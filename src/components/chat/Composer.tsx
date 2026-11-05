@@ -109,7 +109,7 @@ export function Composer({
             }
           }}
           rows={1}
-          placeholder={busy ? "Assistant is running…" : "Message OpenCode… (/ for commands)"}
+          placeholder={busy ? "Jerry is thinking…" : "Talk to Jerry… (/ for commands)"}
           className="max-h-40 min-h-9 flex-1 resize-none bg-transparent px-2 py-1.5 text-base outline-none placeholder:text-muted-foreground/60"
         />
         {busy ? (
