@@ -10,6 +10,7 @@ import type {
   ChatMessage,
   CommandInfo,
   ConnectionStatus,
+  ModelInfo,
   ProjectInfo,
   SessionInfo,
 } from "@/lib/opencode/types"
@@ -33,6 +34,7 @@ export interface NexusState {
   commands: CommandInfo[]
   agents: AgentInfo[]
   projects: ProjectInfo[]
+  models: ModelInfo[] // provider catalog — ctx-limit chain (SPEC-PHASE2 §4.1)
   activeProjectId: string | null // sidebar filter
   toast: { kind: "error" | "info"; text: string } | null
   // internal scheduling markers consumed by the applyEvent wrapper (§4)
@@ -99,6 +101,9 @@ function scheduleRefetch(targets: RefetchTarget[]) {
         : null,
       targets.includes("projects")
         ? api.listProjects().then((projects) => ({ projects }))
+        : null,
+      targets.includes("models")
+        ? api.listModels().then((models) => ({ models }))
         : null,
       targets.includes("sessions")
         ? state.resync()
@@ -208,16 +213,18 @@ export const useNexus = create<NexusState>()((set, get) => {
         if (!fresh()) return
         set({ messages: { ...get().messages, [activeId]: msgs } })
       }
-      const [commands, agents, projects] = await Promise.all([
+      const [commands, agents, projects, models] = await Promise.all([
         api.listCommands(),
         api.listAgents(),
         api.listProjects(),
+        api.listModels(),
       ])
       if (!fresh()) return
       set({
         commands,
         agents,
         projects,
+        models,
         pendingRefetch: [],
       })
     } catch (err) {
@@ -251,6 +258,7 @@ export const useNexus = create<NexusState>()((set, get) => {
     commands: [],
     agents: [],
     projects: [],
+    models: [],
     activeProjectId: null,
     toast: null,
     pendingReconcile: null,

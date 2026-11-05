@@ -2,7 +2,7 @@
 // components that select the changed slice).
 
 import { useNexus, type NexusState } from "./nexus"
-import type { ChatMessage, SessionInfo } from "@/lib/opencode/types"
+import type { ChatMessage, ModelInfo, SessionInfo } from "@/lib/opencode/types"
 
 export function useActiveSession(): SessionInfo | null {
   return useNexus((s) =>
@@ -28,4 +28,11 @@ export function useIsBusy(): boolean {
 /** Status only — avoids re-rendering on version/url updates. */
 export function useStatus(): NexusState["connection"]["status"] {
   return useNexus((s: NexusState) => s.connection.status)
+}
+
+const EMPTY_MODELS: ModelInfo[] = []
+
+export function useModels(): ModelInfo[] {
+  // stable fallback: a fresh [] per call would loop useSyncExternalStore
+  return useNexus((s) => s.models ?? EMPTY_MODELS)
 }

@@ -109,6 +109,89 @@ export interface ServerInfo {
   [k: string]: unknown
 }
 
+// ---------------------------------------------------------------------------
+// Phase 2 additions (SPEC-PHASE2 §0.4/§7; shapes verified against the live
+// v2.2.0 service + /tmp/opencode/nexus-api-samples/)
+
+export interface ModelInfo {
+  id: string
+  modelID: string
+  providerID: string
+  name: string
+  type: string
+  status: string
+  enabled: boolean
+  limit: { context: number; input?: number; output: number }
+  variants?: { id: string; [k: string]: unknown }[]
+}
+
+/** Item of GET /api/session/{id}/context — messages after the last compaction.
+ *  User messages carry `text`; assistant messages carry `content[]` plus
+ *  per-message `tokens` + `cost`. */
+export interface ContextMessage {
+  id: string
+  time: { created: number; streamed?: number; completed?: number }
+  type: MessageRole
+  agent?: string
+  model?: ModelRef
+  tokens?: TokenUsage
+  cost?: number
+  text?: string
+  content?: { type: string; text?: string; [k: string]: unknown }[]
+}
+
+export interface SessionStatsToolUsage {
+  name: string
+  calls: number
+  succeeded: number
+  failed: number
+  unfinished: number
+  durationP50: number
+}
+
+export interface SessionStatsTools {
+  mode: "none" | "summary" | "detail"
+  totals: { calls: number; succeeded: number; failed: number; unfinished: number }
+  /** only present when requested with tools=detail */
+  usage?: SessionStatsToolUsage[]
+}
+
+export interface SessionStatsActivity {
+  date: string // e.g. "2026-11-04"
+  steps: number
+}
+
+export interface SessionStatsModelUsage {
+  model: ModelRef
+  steps: number
+  tokens: TokenUsage
+  cost: number
+}
+
+export interface SessionStatsInfo {
+  range: { from: number; to: number }
+  sessions: number
+  subagents: number
+  prompts: number
+  steps: number
+  tokens: TokenUsage
+  cost: number
+  tools: SessionStatsTools
+  activeDays: number
+  streak: number
+  activity: SessionStatsActivity[]
+  models: SessionStatsModelUsage[]
+}
+
+export interface StatsParams {
+  from?: string
+  to?: string
+  /** Project.ID — a filesystem path is accepted but matches nothing (verified live). */
+  project?: string
+  timezone?: string
+  tools?: "none" | "summary" | "detail"
+}
+
 // request bodies (exact, §5)
 
 export interface PromptBody {

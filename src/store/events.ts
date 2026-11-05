@@ -15,7 +15,7 @@ import type {
 import type { NexusState } from "./nexus"
 
 /** Refetch-list markers (debounced 500 ms by the store wrapper). */
-export type RefetchTarget = "commands" | "agents" | "projects" | "sessions"
+export type RefetchTarget = "commands" | "agents" | "projects" | "sessions" | "models"
 
 function sameSession(state: NexusState, e: NexusEvent): boolean {
   return e.data.sessionID === state.activeSessionId
@@ -537,10 +537,11 @@ export function applyEvent(state: NexusState, e: NexusEvent): NexusState {
         pendingRefetch: unionTarget(state.pendingRefetch, "projects"),
       }
     case "config.updated":
-      // config itself is not stored in Phase 1; refresh sessions as a proxy
+      // config itself is not stored in Phase 1; refresh sessions as a proxy.
+      // models: provider/model catalog feeds the ctx-limit chain (§4.1)
       return {
         ...state,
-        pendingRefetch: unionTarget(state.pendingRefetch, "sessions"),
+        pendingRefetch: unionTarget(unionTarget(state.pendingRefetch, "sessions"), "models"),
       }
 
     case "permission.asked":

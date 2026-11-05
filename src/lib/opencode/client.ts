@@ -7,12 +7,16 @@ import type {
   ChatMessage,
   CommandBody,
   CommandInfo,
+  ContextMessage,
   MessagePart,
   MessageRole,
+  ModelInfo,
   ProjectInfo,
   PromptBody,
   ServerInfo,
   SessionInfo,
+  SessionStatsInfo,
+  StatsParams,
 } from "./types"
 
 export class ApiError extends Error {
@@ -192,5 +196,29 @@ export const api = {
   /** GET /api/project returns a bare array (no envelope). */
   listProjects(): Promise<ProjectInfo[]> {
     return request<ProjectInfo[]>("/api/project")
+  },
+
+  /** GET /api/model — model catalog with `limit.context` for the ctx chain. */
+  listModels(): Promise<ModelInfo[]> {
+    return request<ModelInfo[]>("/api/model")
+  },
+
+  /** GET /api/session/{id}/context — messages after the last compaction
+   *  (the current context window; assistant items carry per-message tokens). */
+  getSessionContext(sessionID: string): Promise<ContextMessage[]> {
+    return request<ContextMessage[]>(`/api/session/${sessionID}/context`)
+  },
+
+  /** GET /api/experimental/session/stats — `project` takes a Project.ID
+   *  (verified live: a path param is accepted but matches nothing). */
+  getSessionStats(params?: StatsParams): Promise<SessionStatsInfo> {
+    const q = new URLSearchParams()
+    for (const [k, v] of Object.entries(params ?? {})) {
+      if (v !== undefined) q.set(k, v)
+    }
+    const qs = q.toString()
+    return request<SessionStatsInfo>(
+      `/api/experimental/session/stats${qs ? `?${qs}` : ""}`,
+    )
   },
 }

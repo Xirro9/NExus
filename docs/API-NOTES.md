@@ -30,7 +30,7 @@ Verified 2026-11-04 against OpenCode v2.2.0 background service. Full spec saved 
 | Send prompt / command / shell | `POST /api/session/{id}/prompt` `{text…}`, `/command`, `/shell` |
 | Interrupt / compact / fork | `POST …/{id}/interrupt`, `/compact`, `/fork` |
 | Session tokens (live totals) | session objects carry `tokens: {input,output,reasoning,cache{read,write}}`, `cost`, `time.created/updated` |
-| Usage stats (real telemetry) | `GET /api/experimental/session/stats?directory=` → sessions, subagents, prompts, steps, tokens, tools{totals}, activity[], models[] |
+| Usage stats (real telemetry) | `GET /api/experimental/session/stats` → sessions, subagents, prompts, steps, tokens, tools{totals, usage?}, activity[], models[], activeDays, streak, cost, range |
 | Agents (primary + subagents) | `GET /api/agent` → `{id,name,mode,hidden,permissions[]}` |
 | Session's agents | `GET /api/session/{id}/agent` |
 | Commands (slash) | `GET /api/command` |
@@ -69,6 +69,31 @@ OpenCode exposes no host metrics. Real-data sources, local-first:
 - **Inference server**: llama-server at `http://172.18.0.3:8080` exposes
   `/health`, `/props` (model, ctx_size), and possibly `/metrics`. Probe and use
   what responds; degrade gracefully to "offline" state.
+
+## Phase 2 findings (T13, verified live 2026-11-04)
+
+- **Stats query params — `project` vs `directory` (spec discrepancy resolved).**
+  The OpenAPI declares `project` (type Project.ID); API-NOTES previously said
+  `directory`. Live test: **both are accepted**, but they differ:
+  - `?directory=/home/mg-12623-8` → full data (22 sessions) — scopes by directory path.
+  - `?project=<Project.ID>` (hash id from `/api/project`) → works, scoped to that project.
+  - `?project=<filesystem path>` → accepted but matches nothing: returns a
+    zeroed payload (`sessions:0`, empty range). **OpenAPI wins on the param
+    name; `project` must be a Project.ID, never a path.** Nexus sends
+    `project=<activeProjectId>` when a sidebar project filter is active.
+- **`tools=detail`** adds `tools.usage[]` (per-tool `calls/succeeded/failed/
+  unfinished/durationP50`); `summary`/omitted gives only `tools.totals`.
+- **`GET /api/session/{id}/context`** → messages after the last compaction.
+  User items carry `text`; assistant items carry `content[]` plus per-message
+  `tokens` (TokenUsage) and `cost` — the exact dataset for the per-message
+  token breakdown.
+- **`GET /api/model`** → `{location, data: Model.Info[]}`; every model carries
+  `limit: {context, output}` (required in the OpenAPI). ⚠ The `llamacpp`
+  provider's catalog entry reports `limit.context: 200000`, but the actual
+  llama-server runs `n_ctx = 1048576` (`/props` `default_generation_settings`).
+  **The catalog limit for llamacpp is stale/misconfigured — the ctx-limit
+  chain must prefer llama `/props` nCtx for `providerID === "llamacpp"`**
+  (SPEC-PHASE2 §4.1 step 1) and only fall back to the catalog for other providers.
 
 ## Gotchas
 
