@@ -1,6 +1,6 @@
-// Message dispatch: user card / assistant card with ordered parts / dim
-// system line. No markdown library in Phase 1 — fenced code via a trivial
-// triple-backtick splitter (§8).
+// Message dispatch: user card / assistant card with ordered parts / centered
+// divider for synthetic roles (SPEC-PHASE3 §9.2). No markdown library in chat
+// (deferred) — fenced code via a trivial triple-backtick splitter (§8).
 
 import type { ChatMessage, MessagePart, TextPart } from "@/lib/opencode/types"
 import { ReasoningBlock } from "./ReasoningBlock"
@@ -112,15 +112,37 @@ export function MessageBubble({ message }: { message: ChatMessage }) {
     )
   }
 
-  // system / synthetic / skill / compaction / idle / agent-switched / …
+  // synthetic roles → centered divider: hairline rules + uppercase label pill
+  // (§9.2) — replaces the raw bracket text
+  const DIVIDER_LABELS: Record<string, string> = {
+    idle: "idle",
+    synthetic: "synthetic",
+    system: "system",
+    skill: "skill",
+    shell: "shell",
+    compaction: "compaction",
+    "agent-switched": "agent switched",
+    "model-switched": "model switched",
+    "location-switched": "location switched",
+  }
+  const label = DIVIDER_LABELS[message.role] ?? message.role
   const line = message.parts
     .filter((p): p is TextPart => p.type === "text")
     .map((p) => p.text)
     .join(" ")
+    .trim()
   return (
-    <div className="px-6 text-center font-mono text-[11px] text-muted-foreground/80">
-      [{message.role}
-      {line ? `: ${line}` : ""}]
+    <div className="flex items-center gap-2 px-6" aria-label={label}>
+      <span className="h-px min-w-6 flex-1 bg-border/60" aria-hidden />
+      <span className="shrink-0 font-mono text-[10px] tracking-wider text-muted-foreground/80 uppercase">
+        {label}
+      </span>
+      {line && (
+        <span className="min-w-0 max-w-[60%] truncate font-mono text-[10px] text-muted-foreground/60">
+          {line}
+        </span>
+      )}
+      <span className="h-px min-w-6 flex-1 bg-border/60" aria-hidden />
     </div>
   )
 }

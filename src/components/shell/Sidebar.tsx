@@ -1,7 +1,11 @@
-// Sidebar: brand row, new-session, project filter, session list.
-// Store-driven; no props (§8).
+// Sidebar: brand row, new-session, project filter, session list with children
+// grouped under their parent roots (SPEC-PHASE3 §9.1). Store-driven.
+//
+// Grouping rules: children (parentID set) whose parent IS loaded nest under
+// it (collapsed by default); children whose parent is outside the 50-session
+// window render at top level with an agent chip.
 
-import { useMemo } from "react"
+import { useMemo, useState } from "react"
 import { Folder, Plus } from "lucide-react"
 
 import { useNexus } from "@/store/nexus"
@@ -20,15 +24,43 @@ export function Sidebar() {
   const projects = useNexus((s) => s.projects)
   const activeProjectId = useNexus((s) => s.activeProjectId)
   const newSession = useNexus((s) => s.newSession)
+  // expanded parent ids (collapsed by default, §9.1)
+  const [expanded, setExpanded] = useState<Set<string>>(() => new Set())
 
-  const filtered = useMemo(() => {
+  const { roots, orphans } = useMemo(() => {
     const ids = activeProjectId
       ? sessionOrder.filter((id) => sessions[id]?.projectID === activeProjectId)
       : sessionOrder
-    return ids
+    const list = ids
       .map((id) => sessions[id])
       .filter((s): s is NonNullable<typeof s> => Boolean(s))
+    const inList = new Set(list.map((s) => s.id))
+    const roots = list.filter(
+      (s) => !s.parentID || !inList.has(s.parentID),
+    )
+    const childrenOf = new Map<string, NonNullable<typeof s>[]>()
+    for (const s of list) {
+      if (s.parentID && inList.has(s.parentID)) {
+        const arr = childrenOf.get(s.parentID) ?? []
+        arr.push(s)
+        childrenOf.set(s.parentID, arr)
+      }
+    }
+    // children whose parent is not loaded render at top level with agent chip
+    const orphans = list.filter(
+      (s) => s.parentID && !inList.has(s.parentID),
+    )
+    return { roots, orphans, childrenOf }
   }, [sessionOrder, sessions, activeProjectId])
+
+  const toggleExpanded = (id: string) => {
+    setExpanded((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
 
   return (
     <aside className="flex min-h-0 flex-col border-r border-border bg-sidebar text-sidebar-foreground">
@@ -90,11 +122,11 @@ export function Sidebar() {
           Sessions
         </h2>
         <span className="font-mono text-[10px] text-muted-foreground/80">
-          {filtered.length}
+          {roots.length + orphans.length}
         </span>
       </div>
       <nav className="min-h-0 flex-1 overflow-y-auto px-2 pb-3" aria-label="Sessions">
-        {filtered.length === 0 ? (
+        {roots.length + orphans.length === 0 ? (
           <div className="rounded-lg border border-dashed border-border/70 px-3 py-6 text-center">
             <p className="text-xs text-muted-foreground">
               {activeProjectId ? "No sessions in this project." : "No sessions yet."}
@@ -105,14 +137,55 @@ export function Sidebar() {
           </div>
         ) : (
           <ul className="space-y-0.5">
-            {filtered.map((session) => (
-              <SessionListItem
-                key={session.id}
-                session={session}
-                active={session.id === activeSessionId}
-                busy={busy[session.id] ?? false}
-                onSelect={(id) => void useNexus.getState().setActiveSession(id)}
-              />
+            {roots.map((session) => {
+              const children = childrenOf.get(session.id) ?? []
+              return (
+                <li key={session.id}>
+                  <SessionListItem
+                    session={session}
+                    active={session.id === activeSessionId}
+                    busy={busy[session.id] ?? false}
+                    onSelect={(id) =>
+                      void useNexus.getState().setActiveSession(id)
+                    }
+                    childCount={children.length}
+                    expanded={expanded.has(session.id)}
+                    onToggleChildren={
+                      children.length > 0
+                        ? () => toggleExpanded(session.id)
+                        : undefined
+                    }
+                  />
+                  {children.length > 0 && expanded.has(session.id) && (
+                    <ul className="ml-5 space-y-0.5 border-l border-border/50 pl-2">
+                      {children.map((child) => (
+                        <li key={child.id}>
+                          <SessionListItem
+                            session={child}
+                            active={child.id === activeSessionId}
+                            busy={busy[child.id] ?? false}
+                            onSelect={(id) =>
+                              void useNexus.getState().setActiveSession(id)
+                            }
+                            child={{ agent: child.agent }}
+                          />
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </li>
+              )
+            })}
+            {orphans.map((session) => (
+              <li key={session.id}>
+                <SessionListItem
+                  session={session}
+                  active={session.id === activeSessionId}
+                  busy={busy[session.id] ?? false}
+                  onSelect={(id) => void useNexus.getState().setActiveSession(id)}
+                  child={{ agent: session.agent }}
+                />
+              </li>
             ))}
           </ul>
         )}

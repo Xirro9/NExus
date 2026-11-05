@@ -1,4 +1,10 @@
 // One session row: truncated title, relative time, mono id suffix, busy dot.
+// Phase 3 (SPEC-PHASE3 §9.1): optional `child` renders an agent chip instead
+// of the id suffix (subagent rows); optional `childCount`/`expanded`/
+// `onToggleChildren` put a chevron + count badge on a parent row. Existing
+// props stay intact.
+
+import { ChevronDown, ChevronRight } from "lucide-react"
 
 import type { SessionInfo } from "@/lib/opencode/types"
 
@@ -17,14 +23,24 @@ export function SessionListItem({
   active,
   busy,
   onSelect,
+  child,
+  childCount,
+  expanded,
+  onToggleChildren,
 }: {
   session: SessionInfo
   active: boolean
   busy: boolean
   onSelect(id: string): void
+  /** child-row mode: show the agent chip instead of the model/id suffix */
+  child?: { agent?: string }
+  /** parent-row mode: number of nested children (chevron + count badge) */
+  childCount?: number
+  expanded?: boolean
+  onToggleChildren?(): void
 }) {
   return (
-    <li>
+    <div>
       <button
         type="button"
         onClick={() => onSelect(session.id)}
@@ -51,14 +67,39 @@ export function SessionListItem({
           >
             {session.title || "Untitled session"}
           </span>
+          {childCount !== undefined && childCount > 0 && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation()
+                onToggleChildren?.()
+              }}
+              aria-label={`Toggle ${childCount} subagent session${childCount === 1 ? "" : "s"}`}
+              aria-expanded={expanded === true}
+              className="flex shrink-0 items-center gap-0.5 rounded px-0.5 font-mono text-[9px] text-muted-foreground hover:text-foreground"
+            >
+              {expanded ? (
+                <ChevronDown className="size-3" aria-hidden />
+              ) : (
+                <ChevronRight className="size-3" aria-hidden />
+              )}
+              {childCount}
+            </button>
+          )}
           <span className="shrink-0 font-mono text-[10px] text-muted-foreground/80">
             {relativeTime(session.time.updated || session.time.created)}
           </span>
         </div>
         <div className="mt-0.5 pl-3.5 font-mono text-[10px] text-muted-foreground/80">
-          …{session.id.slice(-6)}
+          {child ? (
+            <span className="rounded border border-border/60 px-1">
+              {child.agent ?? "subagent"}
+            </span>
+          ) : (
+            <>…{session.id.slice(-6)}</>
+          )}
         </div>
       </button>
-    </li>
+    </div>
   )
 }
