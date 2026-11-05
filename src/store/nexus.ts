@@ -11,6 +11,8 @@ import type {
   CommandInfo,
   ConnectionStatus,
   ModelInfo,
+  PermissionReply,
+  PermissionRequest,
   ProjectInfo,
   SessionInfo,
 } from "@/lib/opencode/types"
@@ -40,7 +42,8 @@ export interface NexusState {
   // internal scheduling markers consumed by the applyEvent wrapper (§4)
   pendingReconcile: { sessionID: string; at: number } | null
   pendingRefetch: RefetchTarget[]
-  pendingPermissions: number // Phase 3 hook: count only, badge in rail
+  pendingPermissions: number // badge count — kept equal to permissionRequests.length on every authoritative fetch
+  permissionRequests: PermissionRequest[] // pending permission inbox (SPEC-PHASE3 §5)
   // actions
   bootstrap(): Promise<void>
   setActiveSession(id: string | null): Promise<void>
@@ -51,6 +54,17 @@ export interface NexusState {
   sendPrompt(text: string): Promise<boolean>
   sendSlashCommand(name: string, rest: string): Promise<void>
   interruptActive(): Promise<void>
+  /** Re-fetch the pending permission list (drawer open, manual refresh). */
+  refreshPermissions(): Promise<void>
+  /** Reply to a permission request — optimistic remove, authoritative heal.
+   *  ⚠ SINGLE CALL SITE for api.replyPermission (reviewer gate, §12.1):
+   *  only the PermissionCard click handlers may reach this action. */
+  replyPermission(
+    sessionID: string,
+    requestID: string,
+    decision: PermissionReply,
+    message?: string,
+  ): Promise<void>
   resync(): Promise<void>
   applyEvent(e: NexusEvent): void
 }
@@ -108,12 +122,22 @@ function scheduleRefetch(targets: RefetchTarget[]) {
       targets.includes("sessions")
         ? state.resync()
         : null,
+      targets.includes("permissions")
+        ? api
+            .listPermissionRequests()
+            .then((permissionRequests) => ({ permissionRequests }))
+        : null,
     ])
       .then((results) => {
         const patch: Partial<NexusState> = {}
         for (const r of results) {
           if (!r) continue
           Object.assign(patch, r)
+        }
+        // the badge count mirrors the authoritative list length (heals
+        // optimistic-removal drift and missed permission.asked events)
+        if (patch.permissionRequests) {
+          patch.pendingPermissions = patch.permissionRequests.length
         }
         if (Object.keys(patch).length > 0) {
           useNexus.setState({
@@ -213,18 +237,23 @@ export const useNexus = create<NexusState>()((set, get) => {
         if (!fresh()) return
         set({ messages: { ...get().messages, [activeId]: msgs } })
       }
-      const [commands, agents, projects, models] = await Promise.all([
-        api.listCommands(),
-        api.listAgents(),
-        api.listProjects(),
-        api.listModels(),
-      ])
+      const [commands, agents, projects, models, permissionRequests] =
+        await Promise.all([
+          api.listCommands(),
+          api.listAgents(),
+          api.listProjects(),
+          api.listModels(),
+          // drawer populated on boot/reconnect (SPEC-PHASE3 §4.1)
+          api.listPermissionRequests(),
+        ])
       if (!fresh()) return
       set({
         commands,
         agents,
         projects,
         models,
+        permissionRequests,
+        pendingPermissions: permissionRequests.length,
         pendingRefetch: [],
       })
     } catch (err) {
@@ -264,6 +293,7 @@ export const useNexus = create<NexusState>()((set, get) => {
     pendingReconcile: null,
     pendingRefetch: [],
     pendingPermissions: 0,
+    permissionRequests: [],
 
     bootstrap() {
       return resync()
@@ -374,6 +404,38 @@ export const useNexus = create<NexusState>()((set, get) => {
         // interrupted:false → silent (button already hidden when not busy)
       } catch (err) {
         handleApiError("interrupt", err)
+      }
+    },
+
+    async refreshPermissions() {
+      try {
+        const permissionRequests = await api.listPermissionRequests()
+        set({ permissionRequests, pendingPermissions: permissionRequests.length })
+      } catch (err) {
+        handleApiError("permission requests", err)
+      }
+    },
+
+    async replyPermission(sessionID, requestID, decision, message) {
+      const prev = get().permissionRequests
+      const removed = prev.find(
+        (r) => r.id === requestID && r.sessionID === sessionID,
+      )
+      if (!removed) return
+      const remaining = prev.filter((r) => r !== removed)
+      // optimistic removal — the permission.replied refetch heals authoritatively
+      set({ permissionRequests: remaining, pendingPermissions: remaining.length })
+      try {
+        await api.replyPermission(sessionID, requestID, decision, message)
+      } catch (err) {
+        if (err instanceof ApiError && err.status === 404) {
+          // already resolved elsewhere — do not restore; refetch the truth
+          toast("info", "Request already resolved")
+          scheduleRefetch(["permissions"])
+          return
+        }
+        set({ permissionRequests: prev, pendingPermissions: prev.length })
+        handleApiError("permission reply", err)
       }
     },
 

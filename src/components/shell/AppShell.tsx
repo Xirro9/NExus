@@ -15,6 +15,7 @@ import { useNexus } from "@/store/nexus"
 import { useStatus } from "@/store/selectors"
 import { ChatPanel } from "@/components/chat/ChatPanel"
 import { DashboardView } from "@/components/dashboard/DashboardView"
+import { PermissionDrawer } from "@/components/permissions/PermissionDrawer"
 import { DegradedBanner } from "./DegradedBanner"
 import { MainTabs, type MainView } from "./MainTabs"
 import { Sidebar } from "./Sidebar"
@@ -41,6 +42,7 @@ export function AppShell() {
   )
   const status = useStatus()
   const toast = useNexus((s) => s.toast)
+  const [permissionsOpen, setPermissionsOpen] = useState(false)
 
   useEffect(() => {
     void bootstrap()
@@ -66,7 +68,11 @@ export function AppShell() {
       <div className="grid min-h-0 flex-1 grid-cols-[280px_1fr] lg:grid-cols-[280px_1fr_260px]">
         <Sidebar />
         <main className="flex min-h-0 min-w-0 flex-col">
-          <MainTabs view={mainView} onChange={changeView} />
+          <MainTabs
+            view={mainView}
+            onChange={changeView}
+            onOpenPermissions={() => setPermissionsOpen(true)}
+          />
           <div className="min-h-0 flex-1">
             {/* `hidden` (Tailwind preflight: display:none !important) keeps
                 ChatPanel alive — scroll + SSE untouched across view switches */}
@@ -87,10 +93,17 @@ export function AppShell() {
               <PanelRightOpen className="size-4" aria-hidden />
             </button>
           ) : (
-            <RailSlot onCollapse={toggleRail} />
+            <RailSlot
+              onCollapse={toggleRail}
+              onOpenPermissions={() => setPermissionsOpen(true)}
+            />
           )}
         </aside>
       </div>
+      <PermissionDrawer
+        open={permissionsOpen}
+        onClose={() => setPermissionsOpen(false)}
+      />
       <AnimatePresence>
         {toast && (
           <motion.div
@@ -115,7 +128,13 @@ export function AppShell() {
   )
 }
 
-function RailSlot({ onCollapse }: { onCollapse: () => void }) {
+function RailSlot({
+  onCollapse,
+  onOpenPermissions,
+}: {
+  onCollapse: () => void
+  onOpenPermissions: () => void
+}) {
   const activeSessionId = useNexus((s) => s.activeSessionId)
   const session = useNexus((s) =>
     s.activeSessionId ? (s.sessions[s.activeSessionId] ?? null) : null,
@@ -130,7 +149,11 @@ function RailSlot({ onCollapse }: { onCollapse: () => void }) {
       >
         <PanelRightClose className="size-3.5" aria-hidden />
       </button>
-      <StatusRail session={session} key={activeSessionId ?? "none"} />
+      <StatusRail
+        session={session}
+        onOpenPermissions={onOpenPermissions}
+        key={activeSessionId ?? "none"}
+      />
     </div>
   )
 }

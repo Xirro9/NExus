@@ -57,7 +57,13 @@ function TokenBlock({ session }: { session: SessionInfo }) {
   )
 }
 
-export function StatusRail({ session }: { session: SessionInfo | null }) {
+export function StatusRail({
+  session,
+  onOpenPermissions,
+}: {
+  session: SessionInfo | null
+  onOpenPermissions(): void
+}) {
   const busy = useIsBusy()
   // primitives only — `connection` changes on every event (liveness stamp)
   const version = useNexus((s) => s.connection.version)
@@ -104,19 +110,30 @@ export function StatusRail({ session }: { session: SessionInfo | null }) {
         </dl>
       </div>
 
-      {/* Phase 3 hook: permission inbox badge */}
-      {pendingPermissions > 0 && (
-        <div className="flex items-center gap-2 rounded-xl border border-warning/40 bg-warning/10 p-3 text-xs text-warning">
-          <ShieldAlert className="h-4 w-4 shrink-0" aria-hidden />
-          {pendingPermissions} permission
-          {pendingPermissions === 1 ? "" : "s"} pending
-        </div>
-      )}
+      {/* permission inbox: opens the slide-over drawer (SPEC-PHASE3 §5.1) */}
+      <button
+        type="button"
+        onClick={onOpenPermissions}
+        className={
+          "flex items-center gap-2 rounded-xl border p-3 text-left text-xs transition-colors duration-150 " +
+          (pendingPermissions > 0
+            ? "border-warning/40 bg-warning/10 text-warning hover:bg-warning/20"
+            : "border-border/70 bg-card text-muted-foreground hover:bg-secondary/50")
+        }
+        aria-label="Open permission inbox"
+      >
+        <ShieldAlert className="h-4 w-4 shrink-0" aria-hidden />
+        <span className="flex-1">
+          {pendingPermissions > 0
+            ? `${pendingPermissions} permission${pendingPermissions === 1 ? "" : "s"} pending`
+            : "Permissions clear"}
+        </span>
+      </button>
 
       <TelemetryMini session={session} />
 
       <div className="mt-auto pt-3 text-center font-mono text-[10px] text-muted-foreground/80">
-        nexus · phase 2
+        nexus · phase 3
       </div>
     </div>
   )

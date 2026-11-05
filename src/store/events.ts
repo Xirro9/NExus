@@ -15,7 +15,13 @@ import type {
 import type { NexusState } from "./nexus"
 
 /** Refetch-list markers (debounced 500 ms by the store wrapper). */
-export type RefetchTarget = "commands" | "agents" | "projects" | "sessions" | "models"
+export type RefetchTarget =
+  | "commands"
+  | "agents"
+  | "projects"
+  | "sessions"
+  | "models"
+  | "permissions"
 
 function sameSession(state: NexusState, e: NexusEvent): boolean {
   return e.data.sessionID === state.activeSessionId
@@ -545,7 +551,21 @@ export function applyEvent(state: NexusState, e: NexusEvent): NexusState {
       }
 
     case "permission.asked":
-      return { ...state, pendingPermissions: state.pendingPermissions + 1 }
+      // count drives the badge; the refetch marker populates the drawer list
+      // (SPEC-PHASE3 §4.1 — the count alone cannot render the drawer)
+      return {
+        ...state,
+        pendingPermissions: state.pendingPermissions + 1,
+        pendingRefetch: unionTarget(state.pendingRefetch, "permissions"),
+      }
+
+    case "permission.replied":
+    case "session.permissions":
+      // authoritative add/remove of pending requests (defensive: enum-verified)
+      return {
+        ...state,
+        pendingRefetch: unionTarget(state.pendingRefetch, "permissions"),
+      }
 
     default:
       return state
