@@ -10,6 +10,7 @@ import { Folder, Plus } from "lucide-react"
 
 import { useNexus } from "@/store/nexus"
 import { useStatus } from "@/store/selectors"
+import type { SessionInfo } from "@/lib/opencode/types"
 
 import { ConnectionBadge } from "./ConnectionBadge"
 import { SessionListItem } from "./SessionListItem"
@@ -27,18 +28,18 @@ export function Sidebar() {
   // expanded parent ids (collapsed by default, §9.1)
   const [expanded, setExpanded] = useState<Set<string>>(() => new Set())
 
-  const { roots, orphans } = useMemo(() => {
+  const { roots, orphans, childrenOf } = useMemo(() => {
     const ids = activeProjectId
       ? sessionOrder.filter((id) => sessions[id]?.projectID === activeProjectId)
       : sessionOrder
     const list = ids
       .map((id) => sessions[id])
-      .filter((s): s is NonNullable<typeof s> => Boolean(s))
+      .filter((s): s is SessionInfo => Boolean(s))
     const inList = new Set(list.map((s) => s.id))
     const roots = list.filter(
       (s) => !s.parentID || !inList.has(s.parentID),
     )
-    const childrenOf = new Map<string, NonNullable<typeof s>[]>()
+    const childrenOf = new Map<string, SessionInfo[]>()
     for (const s of list) {
       if (s.parentID && inList.has(s.parentID)) {
         const arr = childrenOf.get(s.parentID) ?? []
