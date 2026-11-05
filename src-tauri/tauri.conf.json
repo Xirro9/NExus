@@ -1,8 +1,8 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
-  "productName": "nexus",
+  "productName": "Jerry",
   "version": "0.1.0",
-  "identifier": "com.tauri.dev",
+  "identifier": "com.xirro9.jerry",
   "build": {
     "frontendDist": "../dist",
     "devUrl": "http://localhost:1420",
@@ -12,29 +12,29 @@
   "app": {
     "windows": [
       {
-        "title": "OpenCode Nexus",
-        "width": 800,
-        "height": 600,
+        "title": "Jerry",
+        "width": 1440,
+        "height": 900,
+        "minWidth": 820,
+        "minHeight": 600,
         "resizable": true,
+        "center": true,
         "fullscreen": false
       }
     ],
     "security": {
-      "csp": null
+      "csp": "default-src 'self'; connect-src 'self' ipc: http://ipc.localhost; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'"
     }
   },
   "bundle": {
     "active": true,
-    "targets": "all",
+    "targets": ["deb", "appimage"],
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
       "icons/128x128@2x.png",
       "icons/icon.icns",
       "icons/icon.ico"
-    ],
-    "android": {
-      "debugApplicationIdSuffix": ".debug"
-    }
+    ]
   }
 }

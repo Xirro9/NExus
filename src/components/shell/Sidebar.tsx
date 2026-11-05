@@ -73,7 +73,7 @@ export function Sidebar() {
             aria-hidden
           />
           <span className="text-[17px] leading-none font-semibold tracking-tight">
-            Nexus
+            Jerry
           </span>
         </span>
         <ConnectionBadge status={status} version={version} />
