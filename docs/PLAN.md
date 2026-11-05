@@ -43,8 +43,10 @@ Goal: a working, beautiful chat client talking to the real OpenCode server.
 - [x] Live updates via 2 s poll of `/telemetry/snapshot` (our middleware — NOT OpenCode SSE; zero OpenCode API load) (T14)
 
 **Spec:** `docs/SPEC-PHASE2.md` (tasks T11–T19).
+**Pipeline executed:** architect spec → developer T11–T19 (`05c9038..d38c8e8`) → ui-designer polish (`423b079`) → reviewer gate **APPROVE** → review fixes (`f0e150f`: EMPTY_TOKENS guards, UTC activity keys, spec §1 llama-URL correction) → Playwright inspection (all panels real-data verified, 0 console errors/warnings).
 **Resolved:** stats query param — `project=` (OpenAPI) takes a Project.ID; `directory=` also works live; `project=<path>` matches nothing (docs/API-NOTES.md).
 **Verified live:** snapshot numbers vs top/free/nvidia-smi/curl; nCtx 1048576 from /props; degrade drills (llama unreachable → retained model + propsStaleMs → one-probe recovery); view switching preserves chat; mainView persisted; reduced-motion; zero console errors/warnings.
+**Optional follow-up:** restart glm-server container with `--metrics` for real KV-cache/prompt metrics.
 
 ## Phase 3 — Agents, sessions, projects, memory ☐
 
