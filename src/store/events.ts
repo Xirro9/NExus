@@ -22,6 +22,8 @@ export type RefetchTarget =
   | "sessions"
   | "models"
   | "permissions"
+  | "worktrees"
+  | "extensions"
 
 function sameSession(state: NexusState, e: NexusEvent): boolean {
   return e.data.sessionID === state.activeSessionId
@@ -565,6 +567,24 @@ export function applyEvent(state: NexusState, e: NexusEvent): NexusState {
       return {
         ...state,
         pendingRefetch: unionTarget(state.pendingRefetch, "permissions"),
+      }
+
+    case "worktree.updated":
+    case "worktree.resolved":
+      // reload the Projects view's visible worktree lists (debounced 500 ms)
+      return {
+        ...state,
+        pendingRefetch: unionTarget(state.pendingRefetch, "worktrees"),
+      }
+
+    case "skill.updated":
+    case "plugin.updated":
+    case "mcp.status.changed":
+      // invalidate the System view's extension cache — next view-open refetches
+      // (no polling, §8.1); the handler lives in the workspace store
+      return {
+        ...state,
+        pendingRefetch: unionTarget(state.pendingRefetch, "extensions"),
       }
 
     default:

@@ -1,10 +1,14 @@
 // App shell: grid [280px sidebar] [1fr main] [260px rail], collapsible rail.
 // Mounts the SSE stream, health poll, telemetry poll + bootstrap exactly once.
-// The main area switches Chat | Dashboard (MainTabs): ChatPanel stays mounted
-// (hidden attribute) so scroll state and the SSE stream are untouched; the
-// dashboard mounts lazily on first open and stays mounted (SPEC-PHASE2 §6).
+// View mounting rules (SPEC-PHASE3 §1):
+//  - ChatPanel: stays mounted + hidden (Phase 2 rule) — scroll + SSE untouched
+//  - DashboardView: lazy-mount on first open, stays mounted with `visible`
+//  - Agents/History/Projects/System: lazy-mount on first open AND unmount on
+//    tab leave (xyflow zero-measure guard; no streaming state worth keeping —
+//    stores persist the data so remounts are instant)
+//  - every view is React.lazy so view code never enters the main chunk
 
-import { useEffect, useState } from "react"
+import { Suspense, lazy, useEffect, useState } from "react"
 import { AnimatePresence, motion } from "motion/react"
 import { PanelRightClose, PanelRightOpen } from "lucide-react"
 
@@ -13,6 +17,7 @@ import { useHealthPoll } from "@/hooks/useHealthPoll"
 import { useTelemetryPoll } from "@/hooks/useTelemetryPoll"
 import { useNexus } from "@/store/nexus"
 import { useStatus } from "@/store/selectors"
+import { useWorkspace } from "@/store/workspace"
 import { ChatPanel } from "@/components/chat/ChatPanel"
 import { DashboardView } from "@/components/dashboard/DashboardView"
 import { PermissionDrawer } from "@/components/permissions/PermissionDrawer"
@@ -20,6 +25,19 @@ import { DegradedBanner } from "./DegradedBanner"
 import { MainTabs, type MainView } from "./MainTabs"
 import { Sidebar } from "./Sidebar"
 import { StatusRail } from "@/components/rail/StatusRail"
+
+const AgentGraphView = lazy(() =>
+  import("@/components/agents/AgentGraphView").then((m) => ({ default: m.AgentGraphView })),
+)
+const HistoryView = lazy(() =>
+  import("@/components/history/HistoryView").then((m) => ({ default: m.HistoryView })),
+)
+const ProjectsView = lazy(() =>
+  import("@/components/projects/ProjectsView").then((m) => ({ default: m.ProjectsView })),
+)
+const SystemView = lazy(() =>
+  import("@/components/system/SystemView").then((m) => ({ default: m.SystemView })),
+)
 
 const RAIL_KEY = "nexus.railCollapsed"
 const MAIN_VIEW_KEY = "nexus.mainView"
@@ -33,9 +51,15 @@ export function AppShell() {
   const [railCollapsed, setRailCollapsed] = useState(
     () => localStorage.getItem(RAIL_KEY) === "1",
   )
-  const [mainView, setMainView] = useState<MainView>(() =>
-    localStorage.getItem(MAIN_VIEW_KEY) === "dashboard" ? "dashboard" : "chat",
-  )
+  const [mainView, setMainView] = useState<MainView>(() => {
+    const stored = localStorage.getItem(MAIN_VIEW_KEY) ?? ""
+    // unknown stored values fall back to "chat" (§1)
+    return (["chat", "dashboard", "agents", "history", "projects", "system"] as const).includes(
+      stored as MainView,
+    )
+      ? (stored as MainView)
+      : "chat"
+  })
   // lazy dashboard mount: only created on first open, then kept alive
   const [dashboardEverOpened, setDashboardEverOpened] = useState(
     () => localStorage.getItem(MAIN_VIEW_KEY) === "dashboard",
@@ -54,6 +78,17 @@ export function AppShell() {
     if (v === "dashboard") setDashboardEverOpened(true)
   }
   const dashboardMounted = dashboardEverOpened
+
+  /** Row click → open the session in Chat (History/Agents/detail panels). */
+  const openSessionInChat = (id: string) => {
+    void useNexus.getState().setActiveSession(id)
+    changeView("chat")
+  }
+  /** ProjectCard "Browse all" → History pre-filtered to that project. */
+  const browseProjectHistory = (projectId: string) => {
+    void useWorkspace.getState().searchHistory({ projectId })
+    changeView("history")
+  }
 
   const toggleRail = () => {
     setRailCollapsed((prev) => {
@@ -80,6 +115,27 @@ export function AppShell() {
               <ChatPanel />
             </div>
             {dashboardMounted && <DashboardView visible={mainView === "dashboard"} />}
+            {/* lazy-mount AND unmount on tab leave (xyflow zero-measure, §1) */}
+            {mainView === "agents" && (
+              <Suspense>
+                <AgentGraphView onOpenSession={openSessionInChat} />
+              </Suspense>
+            )}
+            {mainView === "history" && (
+              <Suspense>
+                <HistoryView onOpenSession={openSessionInChat} />
+              </Suspense>
+            )}
+            {mainView === "projects" && (
+              <Suspense>
+                <ProjectsView onBrowseAll={browseProjectHistory} />
+              </Suspense>
+            )}
+            {mainView === "system" && (
+              <Suspense>
+                <SystemView />
+              </Suspense>
+            )}
           </div>
         </main>
         <aside className="hidden min-h-0 border-l border-border/70 lg:block">

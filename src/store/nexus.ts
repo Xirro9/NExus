@@ -17,6 +17,7 @@ import type {
   SessionInfo,
 } from "@/lib/opencode/types"
 import { applyEvent, type RefetchTarget } from "./events"
+import { useWorkspace } from "./workspace"
 
 export interface NexusState {
   connection: {
@@ -56,6 +57,10 @@ export interface NexusState {
   interruptActive(): Promise<void>
   /** Re-fetch the pending permission list (drawer open, manual refresh). */
   refreshPermissions(): Promise<void>
+  /** Agents-graph reconciliation poll (5 s, Agents-tab-visible only, §2.2):
+   *  upserts sessions missed during SSE gaps and heals terminal outcomes.
+   *  Best-effort — failures are silent (the SSE path stays authoritative). */
+  reconcileSessions(): Promise<void>
   /** Reply to a permission request — optimistic remove, authoritative heal.
    *  ⚠ SINGLE CALL SITE for api.replyPermission (reviewer gate, §12.1):
    *  only the PermissionCard click handlers may reach this action. */
@@ -127,6 +132,9 @@ function scheduleRefetch(targets: RefetchTarget[]) {
             .listPermissionRequests()
             .then((permissionRequests) => ({ permissionRequests }))
         : null,
+      // cross-store targets (SPEC-PHASE3 §4.2): workspace-owned data.
+      targets.includes("worktrees") ? reloadLoadedWorktrees() : null,
+      targets.includes("extensions") ? invalidateExtensions() : null,
     ])
       .then((results) => {
         const patch: Partial<NexusState> = {}
@@ -148,6 +156,24 @@ function scheduleRefetch(targets: RefetchTarget[]) {
       })
       .catch((err) => handleApiError("list refetch", err))
   }, 500)
+}
+
+// ---------------------------------------------------------------------------
+// cross-store refetch handlers (workspace-owned data, §4.2)
+
+/** worktree.updated / worktree.resolved → reload every loaded worktree list
+ *  (the Projects view's visible lists), debounced by scheduleRefetch. */
+function reloadLoadedWorktrees() {
+  const { worktrees, loadWorktrees } = useWorkspace.getState()
+  for (const projectID of Object.keys(worktrees)) {
+    void loadWorktrees(projectID)
+  }
+}
+
+/** skill.updated / plugin.updated / mcp.status.changed / config.updated →
+ *  invalidate the extensions cache; the next System-view open refetches. */
+function invalidateExtensions() {
+  useWorkspace.setState({ skills: null, plugins: null, mcpServers: null })
 }
 
 // ---------------------------------------------------------------------------
@@ -413,6 +439,32 @@ export const useNexus = create<NexusState>()((set, get) => {
         set({ permissionRequests, pendingPermissions: permissionRequests.length })
       } catch (err) {
         handleApiError("permission requests", err)
+      }
+    },
+
+    async reconcileSessions() {
+      try {
+        // no directory filter — children across the workspace must appear (§2.2)
+        const res = await api.listSessionsQuery({ limit: "200" })
+        const s = get()
+        const sessions = { ...s.sessions }
+        const newIds: string[] = []
+        const busy = { ...s.busy }
+        for (const sess of res.sessions) {
+          if (!sessions[sess.id]) newIds.push(sess.id)
+          sessions[sess.id] = sess
+          // heal a stuck busy flag (time.idle set = not running)
+          if (sess.time.idle !== undefined) busy[sess.id] = false
+        }
+        set({
+          sessions,
+          busy,
+          ...(newIds.length > 0
+            ? { sessionOrder: [...newIds, ...s.sessionOrder] }
+            : {}),
+        })
+      } catch (err) {
+        console.warn("[nexus] graph reconcile failed:", err)
       }
     },
 
