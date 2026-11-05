@@ -1,14 +1,15 @@
 // Telemetry store — separate zustand store (SPEC-PHASE2 §3.1): the 2 s poll
 // cadence must not touch the chat store's event flow, and dashboard components
-// re-render independently of chat. Phase 4 swaps the transport in this file.
+// re-render independently of chat. Snapshot comes from the transport
+// (dev middleware in a browser; Rust telemetry_snapshot in the Tauri shell).
 //
 // zustand v5 rule: selectors below return module-level EMPTY_* constants as
 // fallbacks — a fresh [] per selector call would loop useSyncExternalStore.
 
 import { create } from "zustand"
 
+import { transport } from "@/lib/transport"
 import {
-  TELEMETRY_SNAPSHOT_PATH,
   type GpuSample,
   type LlmSnapshot,
   type SystemSample,
@@ -42,9 +43,7 @@ export const useTelemetry = create<TelemetryState>()((set) => ({
       if (inFlight) return
       inFlight = true
       try {
-        const res = await fetch(TELEMETRY_SNAPSHOT_PATH, { cache: "no-store" })
-        if (!res.ok) throw new Error(`telemetry HTTP ${res.status}`)
-        const snapshot = (await res.json()) as TelemetrySnapshot
+        const snapshot = await transport.telemetrySnapshot()
         // wholesale replace on success — a fresh object per 2 s tick is fine
         // (the v5 hazard is only fresh objects returned FROM selectors)
         set({ snapshot, poll: "polling", lastFetchAt: Date.now(), error: null })
