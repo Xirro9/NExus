@@ -8,12 +8,11 @@ use std::time::Duration;
 use tauri::{
     menu::{Menu, MenuItem, PredefinedMenuItem},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
-    Manager, WindowEvent,
+    Manager,
 };
 
 /// Show + focus the main window (single-instance callback, tray Show,
-/// left-click). Telemetry + SSE keep running while hidden — close-to-tray
-/// keeps the always-on monitor alive (SPEC-PHASE4 §7).
+/// left-click).
 fn show_main(app: &tauri::AppHandle) {
     if let Some(window) = app.get_webview_window("main") {
         let _ = window.unminimize();
@@ -94,13 +93,8 @@ pub fn run() {
             sse_pump::event_stream_stop,
             telemetry::telemetry_snapshot
         ])
-        .on_window_event(|window, event| {
-            // close-to-tray: X hides the window; Quit lives in the tray
-            if let WindowEvent::CloseRequested { api, .. } = event {
-                api.prevent_close();
-                let _ = window.hide();
-            }
-        })
+        // closing the window quits the app: no close-to-tray, so a fresh
+        // launch always starts a fresh process (operator preference)
         .run(tauri::generate_context!())
         .expect("error while building tauri application");
 }

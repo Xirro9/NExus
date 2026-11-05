@@ -111,7 +111,7 @@ The llama-server target is resolved once at app boot from `NEXUS_LLM_URL`
 before launching the app if the container IP changes.
 
 Desktop conveniences: window state restore, single-instance focus, tray
-(Show/Hide/Quit), and close-to-tray (telemetry + SSE keep running while hidden).
+(Show/Hide/Quit), and quit-on-close (closing the window exits the app).
 
 </details>
 
