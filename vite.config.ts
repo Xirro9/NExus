@@ -5,6 +5,8 @@ import tailwindcss from "@tailwindcss/vite"
 import react from "@vitejs/plugin-react"
 import { defineConfig } from "vite"
 
+import { telemetryPlugin } from "./src/server/telemetry"
+
 const SERVICE_JSON = homedir() + "/.local/state/opencode/service.json"
 
 interface ServiceCreds {
@@ -39,7 +41,7 @@ const boot = readService() // target pinned at boot; password re-read per reques
 
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react(), tailwindcss()],
+  plugins: [react(), tailwindcss(), telemetryPlugin()],
   resolve: {
     alias: {
       "@": fileURLToPath(new URL("./src", import.meta.url)),
@@ -69,11 +71,6 @@ export default defineConfig({
             }
           })
         },
-      },
-      "/llm": {
-        // reserved for Phase 2 telemetry middleware
-        target: boot?.url ?? "http://127.0.0.1:49374",
-        changeOrigin: true,
       },
     },
   },
