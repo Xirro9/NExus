@@ -6,6 +6,7 @@ import { useNexus } from "@/store/nexus"
 import type { SessionInfo } from "@/lib/opencode/types"
 import { ShieldAlert } from "lucide-react"
 import { AiCore, StaticCore } from "./AiCore"
+import { TelemetryMini } from "./TelemetryMini"
 
 function fmt(n: number): string {
   if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + "M"
@@ -112,8 +113,10 @@ export function StatusRail({ session }: { session: SessionInfo | null }) {
         </div>
       )}
 
+      <TelemetryMini session={session} />
+
       <div className="mt-auto pt-3 text-center font-mono text-[10px] text-muted-foreground/80">
-        nexus · phase 1
+        nexus · phase 2
       </div>
     </div>
   )

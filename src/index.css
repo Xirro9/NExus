@@ -45,6 +45,7 @@
     --color-warning: var(--warning);
     --glow-primary: 0 0 24px oklch(0.82 0.16 195 / 0.35);
     --glow-accent: 0 0 24px oklch(0.72 0.19 300 / 0.30);
+    --glow-success: 0 0 16px oklch(0.75 0.16 155 / 0.30);
     --radius-sm: calc(var(--radius) * 0.6);
     --radius-md: calc(var(--radius) * 0.8);
     --radius-lg: var(--radius);
