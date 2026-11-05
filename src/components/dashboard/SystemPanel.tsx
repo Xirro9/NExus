@@ -8,7 +8,7 @@ import { useSystemSamples, useTelemetry } from "@/store/telemetry"
 import { AXIS_TICK, TOOLTIP_PROPS, useAnimateOnce } from "./chart-utils"
 import { PanelCard, Warming } from "./PanelCard"
 
-export function SystemPanel() {
+export function SystemPanel({ visible }: { visible: boolean }) {
   const samples = useSystemSamples()
   const ok = useTelemetry((s) => s.snapshot?.system.ok ?? false)
   const error = useTelemetry((s) => s.snapshot?.system.error ?? null)
@@ -38,7 +38,7 @@ export function SystemPanel() {
       ) : (
         <>
           <div className="grid grid-cols-2 gap-3">
-            <ChartCell label="cpu %">
+            <ChartCell label="cpu %" visible={visible}>
               <AreaChart data={data} margin={{ top: 4, right: 4, bottom: 0, left: 0 }}>
                 <defs>
                   <linearGradient id="nexus-cpu-fill" x1="0" y1="0" x2="0" y2="1">
@@ -70,7 +70,7 @@ export function SystemPanel() {
                 />
               </AreaChart>
             </ChartCell>
-            <ChartCell label="ram %">
+            <ChartCell label="ram %" visible={visible}>
               <AreaChart data={data} margin={{ top: 4, right: 4, bottom: 0, left: 0 }}>
                 <defs>
                   <linearGradient id="nexus-ram-fill" x1="0" y1="0" x2="0" y2="1">
@@ -114,16 +114,30 @@ export function SystemPanel() {
   )
 }
 
-function ChartCell({ label, children }: { label: string; children: React.ReactNode }) {
+function ChartCell({
+  label,
+  visible,
+  children,
+}: {
+  label: string
+  visible: boolean
+  children: React.ReactNode
+}) {
   return (
     <div>
       <div className="mb-1 font-mono text-[10px] tracking-wider text-muted-foreground uppercase">
         {label}
       </div>
       <div className="h-[130px]">
-        <ResponsiveContainer width="100%" height="100%">
-          {children}
-        </ResponsiveContainer>
+        {/* charts unmount while the dashboard is hidden (display:none measures
+            0 → recharts warnings); the server ring keeps the data (§3.4) */}
+        {visible ? (
+          <ResponsiveContainer width="100%" height="100%" initialDimension={{ width: 640, height: 130 }}>
+            {children}
+          </ResponsiveContainer>
+        ) : (
+          <div className="h-full rounded-lg bg-muted/20" aria-hidden />
+        )}
       </div>
     </div>
   )

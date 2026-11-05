@@ -13,9 +13,9 @@ export function DashboardView({ visible }: { visible: boolean }) {
   return (
     <div hidden={!visible} className="h-full overflow-y-auto p-4 pb-8">
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-        <SystemPanel />
-        <GpuPanel />
-        <LlmPanel />
+        <SystemPanel visible={visible} />
+        <GpuPanel visible={visible} />
+        <LlmPanel visible={visible} />
         <ContextPanel visible={visible} />
         <div className="xl:col-span-2">
           <UsagePanel visible={visible} />

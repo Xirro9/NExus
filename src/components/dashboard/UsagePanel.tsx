@@ -205,7 +205,9 @@ export function UsagePanel({ visible }: { visible: boolean }) {
               <p className="py-1 text-xs text-muted-foreground">no activity data</p>
             ) : (
               <div className="h-[130px]">
-                <ResponsiveContainer width="100%" height="100%">
+                {/* unmount while hidden — display:none measures 0 → warnings (§3.4) */}
+                {visible ? (
+                <ResponsiveContainer width="100%" height="100%" initialDimension={{ width: 640, height: 130 }}>
                   <BarChart data={activityRows} margin={{ top: 4, right: 4, bottom: 0, left: 0 }}>
                     <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" vertical={false} />
                     <XAxis dataKey="date" tick={AXIS_TICK} tickLine={false} axisLine={false} minTickGap={40} />
@@ -214,6 +216,9 @@ export function UsagePanel({ visible }: { visible: boolean }) {
                     <Bar dataKey="steps" fill="var(--chart-1)" isAnimationActive={animate} radius={[3, 3, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
+                ) : (
+                  <div className="h-full rounded-lg bg-muted/20" aria-hidden />
+                )}
               </div>
             )}
             <p className="mt-1.5 font-mono text-[10px] text-muted-foreground">

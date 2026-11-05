@@ -16,7 +16,7 @@ const STATUS_META = {
   null: { color: "var(--muted-foreground)", glow: null, label: "checking…" },
 } as const
 
-export function LlmPanel() {
+export function LlmPanel({ visible }: { visible: boolean }) {
   const llm = useLlm()
   const animate = useAnimateOnce()
 
@@ -69,7 +69,9 @@ export function LlmPanel() {
 
           {latencyData.length >= 2 && (
             <div className="h-[56px]">
-              <ResponsiveContainer width="100%" height="100%">
+              {/* unmount while hidden — display:none measures 0 → warnings (§3.4) */}
+              {visible ? (
+              <ResponsiveContainer width="100%" height="100%" initialDimension={{ width: 640, height: 56 }}>
                 <LineChart data={latencyData} margin={{ top: 2, right: 4, bottom: 0, left: 0 }}>
                   <XAxis dataKey="t" hide domain={["dataMin", "dataMax"]} type="number" />
                   <YAxis hide domain={[0, "auto"]} width={0} />
@@ -87,6 +89,9 @@ export function LlmPanel() {
                   />
                 </LineChart>
               </ResponsiveContainer>
+              ) : (
+                <div className="h-full rounded-lg bg-muted/20" aria-hidden />
+              )}
             </div>
           )}
 

@@ -10,7 +10,7 @@ import { PanelCard, Warming } from "./PanelCard"
 
 const GPU_COLORS = ["var(--chart-1)", "var(--chart-2)", "var(--chart-3)", "var(--chart-4)", "var(--chart-5)"]
 
-export function GpuPanel() {
+export function GpuPanel({ visible }: { visible: boolean }) {
   const samples = useGpuSamples()
   const ok = useTelemetry((s) => s.snapshot?.gpu.ok ?? false)
   const error = useTelemetry((s) => s.snapshot?.gpu.error ?? null)
@@ -52,7 +52,10 @@ export function GpuPanel() {
       ) : (
         <>
           <div className="h-[130px]">
-            <ResponsiveContainer width="100%" height="100%">
+            {/* unmount while hidden — display:none measures 0 → recharts warnings;
+                the server ring keeps the data (§3.4) */}
+            {visible ? (
+            <ResponsiveContainer width="100%" height="100%" initialDimension={{ width: 640, height: 130 }}>
               <LineChart data={data} margin={{ top: 4, right: 4, bottom: 0, left: 0 }}>
                 <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" vertical={false} />
                 <XAxis
@@ -84,6 +87,9 @@ export function GpuPanel() {
                 ))}
               </LineChart>
             </ResponsiveContainer>
+            ) : (
+              <div className="h-full rounded-lg bg-muted/20" aria-hidden />
+            )}
           </div>
           <ul className="mt-2 space-y-1 font-mono text-xs">
             {gpus.map((g) => (

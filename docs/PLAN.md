@@ -33,16 +33,18 @@ Goal: a working, beautiful chat client talking to the real OpenCode server.
 **Verified live:** streamed reply, slash command w/ tool part, interrupt mid-stream, session switching, real token/cost telemetry, reducer 11/11 vs captured event log, responsive @1680/1100/820px, reduced-motion.
 **Queued polish (non-blocking, for T10/Phase 2):** style synthetic messages (`[idle]`, `[/command]`, `[system]`) as subtle labeled dividers instead of raw bracket text; strict FIFO tmp-id→delivered matching; T10 offline + rapid-switch drills.
 
-## Phase 2 — Telemetry: system + inference + tokens ☐
+## Phase 2 — Telemetry: system + inference + tokens ☑
 
-- [ ] Node telemetry provider: CPU/RAM from `/proc`, GPU via nvidia-smi (poll ~2s)
-- [ ] Inference server monitor: llama-server `/health`, `/props` (model, ctx_size), latency
-- [ ] Dashboard: live charts (recharts) — GPU/CPU/RAM sparklines, server state
-- [ ] Context window visualization: session tokens vs model ctx size, cache read/write, per-message breakdown
-- [ ] Usage stats view from `/api/experimental/session/stats` (sessions, steps, tools, activity, models)
-- [ ] SSE-driven live updates for all dashboards
+- [x] Node telemetry provider: CPU/RAM from `/proc`, GPU via nvidia-smi (poll ~2s) — Vite plugin middleware `/telemetry/*` (T11–T12)
+- [x] Inference server monitor: llama-server `/health`, `/props` (model, ctx_size), latency (T12)
+- [x] Dashboard: live charts (recharts) — GPU/CPU/RAM sparklines, server state (T15–T16)
+- [x] Context window visualization: session tokens vs model ctx size, cache read/write, per-message breakdown (T17)
+- [x] Usage stats view from `/api/experimental/session/stats` (sessions, steps, tools, activity, models) (T18)
+- [x] Live updates via 2 s poll of `/telemetry/snapshot` (our middleware — NOT OpenCode SSE; zero OpenCode API load) (T14)
 
-**Acceptance:** every number on screen traces to a real measurement; charts update live.
+**Spec:** `docs/SPEC-PHASE2.md` (tasks T11–T19).
+**Resolved:** stats query param — `project=` (OpenAPI) takes a Project.ID; `directory=` also works live; `project=<path>` matches nothing (docs/API-NOTES.md).
+**Verified live:** snapshot numbers vs top/free/nvidia-smi/curl; nCtx 1048576 from /props; degrade drills (llama unreachable → retained model + propsStaleMs → one-probe recovery); view switching preserves chat; mainView persisted; reduced-motion; zero console errors/warnings.
 
 ## Phase 3 — Agents, sessions, projects, memory ☐
 

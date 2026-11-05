@@ -113,7 +113,9 @@ export function ContextPanel({ visible }: { visible: boolean }) {
               </p>
             ) : (
               <div className="h-[130px]">
-                <ResponsiveContainer width="100%" height="100%">
+                {/* unmount while hidden — display:none measures 0 → warnings (§3.4) */}
+                {visible ? (
+                <ResponsiveContainer width="100%" height="100%" initialDimension={{ width: 640, height: 130 }}>
                   <BarChart data={msgRows} margin={{ top: 4, right: 4, bottom: 0, left: 0 }}>
                     <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" vertical={false} />
                     <XAxis
@@ -143,6 +145,9 @@ export function ContextPanel({ visible }: { visible: boolean }) {
                     <Bar dataKey="cacheRead" name="cache read" stackId="t" fill="var(--chart-3)" isAnimationActive={animate} />
                   </BarChart>
                 </ResponsiveContainer>
+                ) : (
+                  <div className="h-full rounded-lg bg-muted/20" aria-hidden />
+                )}
               </div>
             )}
             <p className="mt-1.5 font-mono text-[10px] leading-relaxed text-muted-foreground">
