@@ -23,7 +23,7 @@ export function ChatPanel() {
         <AiCore state="idle" />
         <div>
           <h2 className="text-[26px] leading-tight font-semibold tracking-[-0.01em]">
-            Command your OpenCode
+            Jerry, at your service
           </h2>
           <p className="mt-2 max-w-sm text-sm text-muted-foreground">
             Select a session from the sidebar, or start a new one to begin.

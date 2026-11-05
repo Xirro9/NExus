@@ -16,6 +16,8 @@ Product name **Jerry** (2026-11-05) · repo stays **NExus** · Tauri id `com.xir
 ![Platform](https://img.shields.io/badge/platform-Linux-black?logo=linux&logoColor=white)
 ![Status](https://img.shields.io/badge/status-v0.1.0-shipped-brightgreen)
 
+<img src="docs/screenshots/tour.gif" alt="Jerry — animated tour through chat, dashboard, agent graph, history, projects and system views" width="100%">
+
 </div>
 
 ---
@@ -38,6 +40,17 @@ The launcher looks for the AppImage at
 (override with the `JERRY_APP` env var). Desktop entries and a tray icon
 (Show / Hide / Quit) ship alongside — closing the window hides Jerry to the
 tray while sessions and telemetry keep running.
+
+## 📸 The views
+
+| | |
+| --- | --- |
+| ![Chat — session with tool cards, reasoning and token rail](docs/screenshots/02-chat-session.png) | ![Dashboard — GPU, system, inference and context window](docs/screenshots/03-dashboard.png) |
+| **Chat** — markdown, tool cards, reasoning, live tokens | **Dashboard** — GPU/CPU/RAM, llama health, context window |
+| ![Agent graph — 51 nodes, 25 edges, live sync](docs/screenshots/04-agents.png) | ![History — searchable session archive](docs/screenshots/05-history.png) |
+| **Agents** — live subagent graph (React Flow) | **History** — searchable archive across projects |
+| ![Projects — workspace overview](docs/screenshots/06-projects.png) | ![System — skills, plugins and memory](docs/screenshots/07-system.png) |
+| **Projects** — workspace overview | **System** — skills, plugins, persistent memory |
 
 ## 💬 Talking to Jerry
 
