@@ -8,15 +8,23 @@ import type {
   CommandBody,
   CommandInfo,
   ContextMessage,
+  McpServerInfo,
   MessagePart,
   MessageRole,
   ModelInfo,
+  PermissionReply,
+  PermissionRequest,
+  PluginInfo,
   ProjectInfo,
   PromptBody,
   ServerInfo,
+  SessionCursor,
   SessionInfo,
+  SessionQuery,
   SessionStatsInfo,
+  SkillInfo,
   StatsParams,
+  WorktreeDirectory,
 } from "./types"
 
 export class ApiError extends Error {
@@ -220,5 +228,114 @@ export const api = {
     return request<SessionStatsInfo>(
       `/api/experimental/session/stats${qs ? `?${qs}` : ""}`,
     )
+  },
+
+  // -------------------------------------------------------------------------
+  // Phase 3 additions (SPEC-PHASE3 §3)
+
+  /** Cursor-aware session query (Phase 1 listSessions stays as-is for the
+   *  sidebar). unwrap() gives { data, cursor }; map data → sessions. */
+  listSessionsQuery(q: SessionQuery): Promise<{
+    sessions: SessionInfo[]
+    cursor: SessionCursor
+  }> {
+    const params = new URLSearchParams()
+    for (const [k, v] of Object.entries(q)) {
+      if (v !== undefined) params.set(k, v)
+    }
+    return request<{ data: SessionInfo[]; cursor: SessionCursor }>(
+      `/api/session?${params.toString()}`,
+    ).then((res) => ({
+      sessions: Array.isArray(res.data) ? res.data : [],
+      cursor: res.cursor ?? { previous: null, next: null },
+    }))
+  },
+
+  /** GET /api/permission/request — pending permission requests. */
+  listPermissionRequests(directory?: string): Promise<PermissionRequest[]> {
+    const qs = directory
+      ? `?${new URLSearchParams({ "location[directory]": directory }).toString()}`
+      : ""
+    return request<PermissionRequest[]>(`/api/permission/request${qs}`)
+  },
+
+  /** GET /api/session/{id}/permission — a session's requests. */
+  listSessionPermissions(sessionID: string): Promise<PermissionRequest[]> {
+    return request<PermissionRequest[]>(`/api/session/${sessionID}/permission`)
+  },
+
+  /** POST …/permission/{requestID}/reply — 204. `once`/`always` EXECUTE the
+   *  pending action (`always` also persists an allow rule); `reject` denies.
+   *  ⚠ Single call site policy: only nexus.replyPermission may invoke this. */
+  replyPermission(
+    sessionID: string,
+    requestID: string,
+    decision: PermissionReply,
+    message?: string,
+  ): Promise<void> {
+    return request<void>(
+      `/api/session/${sessionID}/permission/${requestID}/reply`,
+      {
+        method: "POST",
+        body: JSON.stringify(message !== undefined ? { decision, message } : { decision }),
+      },
+    )
+  },
+
+  /** GET /api/worktree?projectID=… — bare array. */
+  listWorktrees(projectID: string): Promise<WorktreeDirectory[]> {
+    return request<WorktreeDirectory[]>(
+      `/api/worktree?${new URLSearchParams({ projectID }).toString()}`,
+    )
+  },
+
+  /** POST /api/worktree/refresh { projectID } — 204. Read-only refresh only:
+   *  worktree create/delete are deliberately excluded (SPEC-PHASE3 §7). */
+  refreshWorktrees(projectID: string): Promise<void> {
+    return request<void>("/api/worktree/refresh", {
+      method: "POST",
+      body: JSON.stringify({ projectID }),
+    })
+  },
+
+  listSkills(): Promise<SkillInfo[]> {
+    return request<SkillInfo[]>("/api/skill")
+  },
+
+  listPlugins(): Promise<PluginInfo[]> {
+    return request<PluginInfo[]>("/api/plugin")
+  },
+
+  listMcpServers(): Promise<McpServerInfo[]> {
+    return request<McpServerInfo[]>("/api/mcp")
+  },
+
+  /** GET /api/session/active → { ses_…: { type: "running" } } map —
+   *  server-truth "running" signal for the agents graph. */
+  listActiveSessions(): Promise<Record<string, { type: "running" }>> {
+    return request<Record<string, { type: "running" }>>("/api/session/active")
+  },
+
+  /** Raw file text — BYPASSES request<T>: fs/read returns bytes
+   *  (application/octet-stream), not a JSON envelope. On !ok parse the
+   *  {_tag} body and throw ApiError. ⚠ Callers MUST use the MEMORY_FILES
+   *  whitelist (SPEC-PHASE3 §4.3) — the endpoint accepts absolute paths. */
+  async readFsFile(absolutePath: string): Promise<string> {
+    const res = await fetch(
+      "/api/fs/read/" + encodeURIComponent(absolutePath),
+    )
+    if (!res.ok) {
+      let tag: string | null = null
+      let message = `${res.status} ${res.statusText}`
+      try {
+        const body = (await res.json()) as { _tag?: string; message?: string }
+        if (body._tag) tag = body._tag
+        if (body.message) message = body.message
+      } catch {
+        // non-JSON error body — keep the status text
+      }
+      throw new ApiError(res.status, tag, message)
+    }
+    return res.text()
   },
 }

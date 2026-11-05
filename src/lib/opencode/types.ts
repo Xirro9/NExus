@@ -101,7 +101,13 @@ export interface CommandInfo {
 export interface ProjectInfo {
   id: string
   canonical: string
-  time: { created: number; updated: number; active?: number }
+  time: { created: number; updated: number; active?: number; archived?: number }
+  /** additive Phase 3 fields (SPEC-PHASE3 §0.9) */
+  vcs?: unknown
+  name?: string
+  icon?: unknown
+  worktrees?: number
+  sandboxes?: string[]
 }
 
 export interface ServerInfo {
@@ -208,4 +214,82 @@ export interface PromptBody {
 export interface CommandBody {
   name: string
   text: string
+}
+
+// ---------------------------------------------------------------------------
+// Phase 3 additions (SPEC-PHASE3 §3; shapes verified against the live
+// v2.2.0 service + /tmp/opencode/nexus-api-samples/)
+
+/** Query params of GET /api/session — a full server-side query engine. */
+export interface SessionQuery {
+  limit?: string
+  order?: "asc" | "desc"
+  search?: string
+  /** Session.ID or the literal string "null" (roots only). */
+  parentID?: string
+  archived?: "true" | "false"
+  directory?: string
+  project?: string
+  cursor?: string
+}
+
+/** SessionsResponse.cursor — opaque, pass through verbatim (§12.6). */
+export interface SessionCursor {
+  previous: string | null
+  next: string | null
+}
+
+export type PermissionReply = "once" | "always" | "reject"
+
+export interface PermissionRequest {
+  id: string
+  sessionID: string
+  action: string
+  resources: string[]
+  save?: string[]
+  metadata?: Record<string, unknown>
+  source?: { type: "tool"; messageID: string; id: string }
+  message?: string
+}
+
+export interface WorktreeDirectory {
+  directory: string
+  strategy?: string
+}
+
+export interface SkillInfo {
+  id: string
+  name: string
+  description?: string
+  autoinvoke?: boolean
+  path: string
+  /** full markdown body — render lazily on expand (56 KB total) */
+  content: string
+}
+
+export type PluginSource =
+  | { type: "builtin" }
+  | { type: "sdk" }
+  | { type: "package"; target: string; version?: string; outdated?: true; updating?: true }
+  | { type: "local"; path: string }
+
+export interface PluginInfo {
+  id?: string
+  source: PluginSource
+  features: { server?: true; tui?: true; rpc?: true; gui?: true }
+  state: { status: "active" } | { status: "failed"; error: string; ref?: string }
+}
+
+export type McpStatus =
+  | { status: "connected" }
+  | { status: "pending" }
+  | { status: "disabled" }
+  | { status: "failed"; error?: string }
+  | { status: "needs_auth"; error?: string }
+
+export interface McpServerInfo {
+  name: string
+  status: McpStatus
+  title?: string
+  integrationID?: string
 }
