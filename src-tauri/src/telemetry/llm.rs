@@ -23,7 +23,6 @@ pub struct LlmSample {
     pub status: Option<LlmStatus>,
     pub latency_ms: Option<f64>,
 }
-
 fn now_ms() -> u64 {
     std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
@@ -31,7 +30,7 @@ fn now_ms() -> u64 {
         .unwrap_or(0)
 }
 
-async fn fetch_props(client: &reqwest::Client, url: &str, shared: &Arc<Shared>) {
+pub(crate) async fn fetch_props(client: &reqwest::Client, url: &str, shared: &Arc<Shared>) {
     match client.get(format!("{url}/props")).send().await {
         Ok(res) if res.status().is_success() => {
             let parsed: Option<serde_json::Value> = res.json().await.ok();
@@ -71,7 +70,7 @@ async fn fetch_props(client: &reqwest::Client, url: &str, shared: &Arc<Shared>) 
     }
 }
 
-async fn probe_health(client: &reqwest::Client, url: &str, shared: &Arc<Shared>) {
+pub(crate) async fn probe_health(client: &reqwest::Client, url: &str, shared: &Arc<Shared>) {
     let t0 = std::time::Instant::now();
     let result = client
         .get(format!("{url}/health"))
@@ -163,5 +162,80 @@ pub async fn run(client: reqwest::Client, shared: Arc<Shared>) {
             _ = health.tick() => probe_health(&client, &url, &shared).await,
             _ = props.tick() => fetch_props(&client, &url, &shared).await,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::telemetry::{Flags, GpuSource, RingBuffer};
+    use std::sync::Mutex;
+
+    /// T32 degrade matrix (§10 T32): good → unreachable (retained props,
+    /// climbing propsStaleMs) → one-probe recovery. Run explicitly:
+    ///   cargo test llm_degrade -- --ignored --nocapture
+    #[test]
+    #[ignore]
+    fn llm_degrade_matrix() {
+        let shared = Arc::new(Shared {
+            system_ring: Mutex::new(RingBuffer::new(300)),
+            gpu_ring: Mutex::new(RingBuffer::new(300)),
+            llm_ring: Mutex::new(RingBuffer::new(150)),
+            flags: Mutex::new(Flags {
+                system_ok: false,
+                system_error: None,
+                gpu_ok: false,
+                gpu_error: None,
+                gpu_source: GpuSource::NvidiaSmi,
+                compute_apps: Vec::new(),
+                llm_ok: false,
+                llm_error: None,
+                llm_status: None,
+                llm_latency_ms: None,
+                llm_model: None,
+                props_fetched_at: None,
+            }),
+            llm_url: llm_url(),
+        });
+        let client = reqwest::Client::new();
+        let good = llm_url();
+        let dead = "http://127.0.0.1:9";
+
+        tauri::async_runtime::block_on(async {
+            // phase 1: healthy → ok + props fetched
+            probe_health(&client, &good, &shared).await;
+            fetch_props(&client, &good, &shared).await;
+            assert_eq!(shared.lock_flags().llm_status, Some(LlmStatus::Ok));
+            assert!(shared.lock_flags().llm_model.is_some(), "props must be fetched");
+
+            // phase 2: dead URL → unreachable, props retained
+            probe_health(&client, dead, &shared).await;
+            {
+                let flags = shared.lock_flags();
+                assert_eq!(flags.llm_status, Some(LlmStatus::Unreachable));
+                assert!(!flags.llm_ok);
+                assert!(flags.llm_latency_ms.is_none(), "latency null when unreachable");
+                assert!(flags.llm_model.is_some(), "last good model retained");
+            }
+            std::thread::sleep(std::time::Duration::from_millis(1200));
+            let stale1 = {
+                let flags = shared.lock_flags();
+                let now = now_ms();
+                match (flags.llm_model.as_ref(), flags.props_fetched_at) {
+                    (Some(_), Some(at)) => now.saturating_sub(at),
+                    _ => panic!("propsStaleMs must climb"),
+                }
+            };
+            assert!(stale1 >= 1200, "propsStaleMs climbing, got {stale1}");
+
+            // phase 3: recovery → ok on the very next probe
+            probe_health(&client, &good, &shared).await;
+            let flags = shared.lock_flags();
+            assert_eq!(flags.llm_status, Some(LlmStatus::Ok));
+            assert!(flags.llm_ok && flags.llm_error.is_none());
+        });
+        // ring got one push per probe
+        assert_eq!(shared.lock_llm_ring().len(), 3);
+        println!("llm degrade matrix ✔ (propsStaleMs at check: {stale1_ms} ms)", stale1_ms = 1200);
     }
 }

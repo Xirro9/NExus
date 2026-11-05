@@ -24,7 +24,7 @@ use system::{SystemSample, SystemSampler};
 // serialized snapshot types — EXACTLY the TelemetrySnapshot shape
 // (SPEC-PHASE2 §2.6, field-for-field)
 
-#[derive(Serialize, Clone, Copy, PartialEq, Eq)]
+#[derive(Serialize, Clone, Copy, PartialEq, Eq, Debug)]
 #[serde(rename_all = "lowercase")]
 pub enum LlmStatus {
     Ok,
@@ -32,7 +32,7 @@ pub enum LlmStatus {
     Unreachable,
 }
 
-#[derive(Serialize, Clone, Copy, PartialEq, Eq)]
+#[derive(Serialize, Clone, Copy, PartialEq, Eq, Debug)]
 pub enum GpuSource {
     #[serde(rename = "nvidia-smi")]
     NvidiaSmi,
@@ -52,6 +52,7 @@ pub struct LlamaModelInfo {
 }
 
 #[derive(Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct LlmSnapshot {
     pub ok: bool,
     pub error: Option<String>,
@@ -275,4 +276,56 @@ pub fn telemetry_snapshot(
         "gpu": { "ok": false, "error": "snapshot serialization failed", "source": "unavailable", "computeApps": [], "samples": [] },
         "llm": { "ok": false, "error": "snapshot serialization failed", "url": "", "status": null, "latencyMs": null, "model": null, "propsStaleMs": null, "samples": [] }
     }))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// T32 acceptance harness: run the REAL loops for ~8 s against the real
+    /// /proc + nvidia-smi + llama endpoints, then dump the snapshot JSON to
+    /// /tmp/opencode/rust-snapshot.json for the programmatic shape diff
+    /// against the dev middleware's golden output. Run explicitly:
+    ///   cargo test --release -- --ignored --nocapture telemetry_shape
+    #[test]
+    #[ignore]
+    fn telemetry_shape_dump() {
+        let shared = Arc::new(Shared {
+            system_ring: Mutex::new(RingBuffer::new(300)),
+            gpu_ring: Mutex::new(RingBuffer::new(300)),
+            llm_ring: Mutex::new(RingBuffer::new(150)),
+            flags: Mutex::new(Flags {
+                system_ok: false,
+                system_error: None,
+                gpu_ok: false,
+                gpu_error: None,
+                gpu_source: GpuSource::NvidiaSmi,
+                compute_apps: Vec::new(),
+                llm_ok: false,
+                llm_error: None,
+                llm_status: None,
+                llm_latency_ms: None,
+                llm_model: None,
+                props_fetched_at: None,
+            }),
+            llm_url: llm::llm_url(),
+        });
+        // blocking loop thread (real cadence)
+        {
+            let shared = shared.clone();
+            std::thread::spawn(move || blocking_loop(shared));
+        }
+        // llm probes on the global tauri async runtime
+        let client = reqwest::Client::new();
+        tauri::async_runtime::spawn(llm::run(client, shared.clone()));
+        // let it warm: 8 s ≈ 4 system/gpu ticks + 1 health + 1 compute-apps
+        std::thread::sleep(std::time::Duration::from_secs(8));
+        let state = TelemetryState { shared: shared.clone() };
+        let json = serde_json::to_value(state.snapshot(None)).expect("serialize");
+        std::fs::write("/tmp/opencode/rust-snapshot.json", serde_json::to_string_pretty(&json).expect("pretty")).expect("write");
+        println!("sample counts: system={} gpu={} llm={}",
+            json.pointer("/system/samples").and_then(|v| v.as_array()).map(|a| a.len()).unwrap_or(0),
+            json.pointer("/gpu/samples").and_then(|v| v.as_array()).map(|a| a.len()).unwrap_or(0),
+            json.pointer("/llm/samples").and_then(|v| v.as_array()).map(|a| a.len()).unwrap_or(0));
+    }
 }

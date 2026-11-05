@@ -27,6 +27,7 @@ const GPU_APPS_ARGS: [&str; 2] = [
 ];
 
 #[derive(Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct GpuInfo {
     pub index: u32,
     pub name: String,
@@ -396,3 +397,92 @@ impl GpuLoop {
 
 // The reader thread owns the channel Sender; dropping the Receiver (in
 // mark_unavailable / on_child_exit) unblocks it and signals stdout EOF.
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::telemetry::{Flags, GpuSource, RingBuffer};
+    use std::sync::{Arc, Mutex};
+
+    fn shared() -> Arc<Shared> {
+        Arc::new(Shared {
+            system_ring: Mutex::new(RingBuffer::new(300)),
+            gpu_ring: Mutex::new(RingBuffer::new(300)),
+            llm_ring: Mutex::new(RingBuffer::new(150)),
+            flags: Mutex::new(Flags {
+                system_ok: false,
+                system_error: None,
+                gpu_ok: false,
+                gpu_error: None,
+                gpu_source: GpuSource::NvidiaSmi,
+                compute_apps: Vec::new(),
+                llm_ok: false,
+                llm_error: None,
+                llm_status: None,
+                llm_latency_ms: None,
+                llm_model: None,
+                props_fetched_at: None,
+            }),
+            llm_url: "http://127.0.0.1:9".into(),
+        })
+    }
+
+    /// T32 degrade matrix — nvidia-smi missing from PATH → source
+    /// "unavailable", no respawn retry. Run isolated (it mutates the process
+    /// PATH): cargo test gpu_unavailable -- --ignored --nocapture --test-threads=1
+    #[test]
+    #[ignore]
+    fn gpu_unavailable_degrade() {
+        // SAFETY: single-threaded test (run with --test-threads=1); PATH is
+        // only mutated to make the nvidia-smi lookup fail.
+        unsafe { std::env::set_var("PATH", "/nonexistent") };
+        let shared = shared();
+        let mut gpu = GpuLoop::new(shared.clone());
+        for _ in 0..3 {
+            gpu.tick();
+            std::thread::sleep(std::time::Duration::from_millis(200));
+        }
+        let flags = shared.lock_flags();
+        assert_eq!(flags.gpu_source, GpuSource::Unavailable);
+        assert_eq!(flags.gpu_error.as_deref(), Some("nvidia-smi not installed"));
+        assert!(!flags.gpu_ok);
+        assert!(gpu.child.is_none() && gpu.rx.is_none(), "no retry state held");
+        // further ticks must not attempt respawn
+        drop(flags);
+        for _ in 0..3 {
+            gpu.tick();
+        }
+        let flags = shared.lock_flags();
+        assert_eq!(flags.gpu_source, GpuSource::Unavailable, "still unavailable, no retry");
+        unsafe { std::env::set_var("PATH", "/usr/bin:/bin") };
+        println!("gpu unavailable degrade ✔ (no retry)");
+    }
+
+    /// T32: compute-apps parsing incl. the " MiB" suffix (§6 table).
+    #[test]
+    fn compute_apps_parse() {
+        let out = "835267, /app/llama-server, 70764 MiB\n225747, /usr/libexec/gnome-remote-desktop-daemon, 560 MiB\n";
+        let apps = parse_compute_apps(out);
+        assert_eq!(apps.len(), 2);
+        assert_eq!(apps[0].pid, 835267);
+        assert_eq!(apps[0].name, "/app/llama-server");
+        assert_eq!(apps[0].mem_used_mi_b, 70764.0);
+        assert_eq!(apps[1].mem_used_mi_b, 560.0);
+    }
+
+    /// T32: gpu csv line parse with quoted commas (splitCsv parity).
+    #[test]
+    fn gpu_line_parse() {
+        let mut warned = false;
+        let info = parse_gpu_line(
+            "0, NVIDIA RTX PRO 6000 Blackwell Max-Q Workstation Edition, 35, 70902, 97887, 76, 87.68",
+            &mut warned,
+        )
+        .expect("parse");
+        assert_eq!(info.index, 0);
+        assert!(info.name.contains("RTX PRO 6000"));
+        assert_eq!(info.mem_used, 70902.0);
+        assert_eq!(info.power_draw, 87.68);
+        assert!(!warned);
+    }
+}
