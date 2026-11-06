@@ -77,7 +77,15 @@ export interface ToolPart {
   id: string
   name: string
   executed: boolean
-  state: { status: string; input?: unknown; output?: unknown }
+  state: {
+    status: string // pending | running | completed | error (verified live)
+    input?: unknown
+    output?: unknown
+    /** tool-specific completion metadata (verified live: subagent carries
+     *  {sessionID, status, truncated}; edit carries {files:[{file,patch}]};
+     *  other tools vary — consumers must stay defensive) */
+    metadata?: Record<string, unknown>
+  }
 }
 
 export type MessagePart = TextPart | ReasoningPart | ToolPart

@@ -2,6 +2,7 @@
 // components that select the changed slice).
 
 import { useNexus, type NexusState } from "./nexus"
+import type { SessionActivity } from "@/lib/agentState"
 import type {
   ChatMessage,
   ModelInfo,
@@ -68,4 +69,26 @@ const EMPTY_PERMISSIONS: PermissionRequest[] = []
 export function usePermissionRequests(): PermissionRequest[] {
   // stable fallback: a fresh [] per call would loop useSyncExternalStore
   return useNexus((s) => s.permissionRequests ?? EMPTY_PERMISSIONS)
+}
+
+const EMPTY_FILES: string[] = []
+
+const EMPTY_ACTIVITY: SessionActivity = {
+  state: "idle",
+  lastEventAt: 0,
+  currentTool: null,
+  currentToolSince: null,
+  toolsRun: 0,
+  filesTouched: EMPTY_FILES,
+  lastError: null,
+  lastActivityKind: null,
+}
+
+/** Per-session activity summary (Phase B §B1) — stable fallback for
+ *  sessions with no activity yet (a fresh object per call would loop
+ *  useSyncExternalStore). */
+export function useSessionActivity(sessionID: string | null): SessionActivity {
+  return useNexus((s) =>
+    sessionID ? (s.activity[sessionID] ?? EMPTY_ACTIVITY) : EMPTY_ACTIVITY,
+  )
 }

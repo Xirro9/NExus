@@ -2,7 +2,17 @@
 // Switch on e.type; unknown types are ignored (future-proof per §4).
 // Chat-delta events for non-active sessions are ignored (cross-session bleed
 // guard) — sessions/usage bookkeeping still applies globally.
+//
+// TWO paths per event (Phase B):
+//   1. reduceEvent — the full message path, guarded by sameSession() so
+//      non-active sessions NEVER accumulate text/deltas/message content.
+//   2. applyActivity — a field-scoped SUMMARY path that runs for ALL
+//      sessions (agent-state derivation, current tool, filesTouched).
+//      It touches only the `activity` slice — never messages — so the
+//      bleed guard keeps holding.
 
+import { appendFilesTouched, deriveAgentState, type SessionActivity } from "@/lib/agentState"
+import { extractFilePaths } from "@/lib/toolDisplay"
 import type { NexusEvent } from "@/lib/opencode/sse"
 import type {
   ChatMessage,
@@ -27,6 +37,203 @@ export type RefetchTarget =
 
 function sameSession(state: NexusState, e: NexusEvent): boolean {
   return e.data.sessionID === state.activeSessionId
+}
+
+// ---------------------------------------------------------------------------
+// activity summary path (Phase B §B1) — runs for ALL sessions
+
+/** Initial activity entry; derived state fills in on the first event. */
+function emptyActivity(at: number): SessionActivity {
+  return {
+    state: "idle",
+    lastEventAt: at,
+    currentTool: null,
+    currentToolSince: null,
+    toolsRun: 0,
+    filesTouched: [],
+    lastError: null,
+    lastActivityKind: null,
+  }
+}
+
+function updateActivity(
+  state: NexusState,
+  sessionID: string,
+  at: number,
+  patch: Partial<SessionActivity>,
+): NexusState {
+  const prev = state.activity[sessionID] ?? emptyActivity(at)
+  // "in" check (not ??): an explicit null patch must RESET the kind
+  // (execution.started clears a stale "tool", permission.replied clears
+  // the event-driven "permission" flag)
+  const kind =
+    "lastActivityKind" in patch
+      ? (patch.lastActivityKind ?? null)
+      : prev.lastActivityKind
+  const next: SessionActivity = {
+    ...prev,
+    ...patch,
+    lastEventAt: at,
+    // derive from real telemetry: busy/outcome as of this event, an
+    // authoritative open permission from the inbox, or an event-driven
+    // permission flag (permission.asked arrives before the refetch heals
+    // the inbox list — cleared on reply or on the next execution run)
+    state: deriveAgentState({
+      busy: state.busy[sessionID] ?? false,
+      outcome: state.sessions[sessionID]?.outcome ?? null,
+      permissionOpen:
+        state.permissionRequests.some((r) => r.sessionID === sessionID) ||
+        kind === "permission",
+      lastActivityKind: kind,
+    }),
+  }
+  return { ...state, activity: { ...state.activity, [sessionID]: next } }
+}
+
+/** Outcome carried by the execution-ending event itself (the session
+ *  record's outcome field only heals on the next sessions refetch). */
+function outcomeOverride(e: NexusEvent): "succeeded" | "failed" | "interrupted" {
+  if (e.type === "session.execution.failed") return "failed"
+  if (e.type === "session.execution.interrupted") return "interrupted"
+  return "succeeded"
+}
+
+/** Error text from a failed tool/execution event, only when a string is
+ *  actually present (content parts carry {type, text} — verified shape). */
+function errorText(data: Record<string, unknown>): string | null {
+  if (typeof data.error === "string" && data.error) return data.error
+  if (Array.isArray(data.content)) {
+    for (const part of data.content) {
+      if (
+        typeof part === "object" &&
+        part !== null &&
+        typeof (part as Record<string, unknown>).text === "string"
+      ) {
+        const text = (part as Record<string, unknown>).text as string
+        if (text) return text
+      }
+    }
+  }
+  return null
+}
+
+/**
+ * SUMMARY path — field-scoped activity updates for ALL sessions. Never
+ * touches `messages`: for non-active sessions this records only labels,
+ * timestamps, tool names, and file paths extracted from real tool
+ * inputs/metadata. The cross-session bleed guard lives in reduceEvent.
+ */
+function applyActivity(state: NexusState, e: NexusEvent): NexusState {
+  const data = e.data
+  const { sessionID } = data as { sessionID?: unknown }
+  if (typeof sessionID !== "string") return state
+  const at = e.created
+  switch (e.type) {
+    case "session.execution.started":
+      // new run: reset run-scoped counters (filesTouched accumulates
+      // session-wide — it is a recent-files list, not a run log)
+      return updateActivity(state, sessionID, at, {
+        currentTool: null,
+        currentToolSince: null,
+        toolsRun: 0,
+        lastError: null,
+        lastActivityKind: null,
+      })
+    case "session.text.delta":
+    case "session.reasoning.delta":
+      // kind label only — NEVER the delta content (bleed guard)
+      return updateActivity(state, sessionID, at, { lastActivityKind: "text" })
+    case "session.tool.called": {
+      const { name, input } = data as { name?: unknown; input?: unknown }
+      if (typeof name !== "string") return state
+      const prev = state.activity[sessionID]
+      return updateActivity(state, sessionID, at, {
+        currentTool: name,
+        currentToolSince: at,
+        toolsRun: (prev?.toolsRun ?? 0) + 1,
+        lastActivityKind: "tool",
+        filesTouched: appendFilesTouched(
+          prev?.filesTouched ?? [],
+          extractFilePaths(name, input, undefined),
+        ),
+      })
+    }
+    case "session.tool.success":
+    case "session.tool.failed": {
+      const { name, metadata } = data as {
+        name?: unknown
+        metadata?: Record<string, unknown>
+      }
+      const prev = state.activity[sessionID]
+      const patch: Partial<SessionActivity> = {
+        currentTool: null,
+        currentToolSince: null,
+        filesTouched: appendFilesTouched(
+          prev?.filesTouched ?? [],
+          extractFilePaths(name, undefined, metadata),
+        ),
+      }
+      if (e.type === "session.tool.failed") {
+        patch.lastError = errorText(data)
+      }
+      return updateActivity(state, sessionID, at, patch)
+    }
+    case "session.execution.succeeded":
+    case "session.execution.failed":
+    case "session.execution.interrupted": {
+      // outcomeOverride: the session record's outcome only heals on refetch
+      const prev = state.activity[sessionID]
+      const patch: Partial<SessionActivity> = {}
+      if (e.type === "session.execution.failed") {
+        patch.lastError = errorText(data) ?? prev?.lastError ?? null
+      }
+      return updateActivityOutcome(state, sessionID, at, outcomeOverride(e), patch)
+    }
+    case "permission.asked":
+      return updateActivity(state, sessionID, at, {
+        lastActivityKind: "permission",
+      })
+    case "permission.replied":
+      // optimistic reply cleared the inbox entry — drop the event-driven
+      // permission flag so a busy session returns to generating/executing
+      if (
+        !state.permissionRequests.some((r) => r.sessionID === sessionID) &&
+        state.activity[sessionID]?.lastActivityKind === "permission"
+      ) {
+        return updateActivity(state, sessionID, at, { lastActivityKind: null })
+      }
+      return state
+    default:
+      return state
+  }
+}
+
+/** Like updateActivity but with the outcome supplied directly (execution
+ *  ending events know the outcome before the session record heals). */
+function updateActivityOutcome(
+  state: NexusState,
+  sessionID: string,
+  at: number,
+  outcome: "succeeded" | "failed" | "interrupted",
+  patch: Partial<SessionActivity>,
+): NexusState {
+  const prev = state.activity[sessionID] ?? emptyActivity(at)
+  const next: SessionActivity = {
+    ...prev,
+    ...patch,
+    lastEventAt: at,
+    state: deriveAgentState({
+      busy: false, // the ending event terminates the run
+      outcome,
+      permissionOpen:
+        state.permissionRequests.some((r) => r.sessionID === sessionID),
+      lastActivityKind:
+        "lastActivityKind" in patch
+          ? (patch.lastActivityKind ?? null)
+          : prev.lastActivityKind,
+    }),
+  }
+  return { ...state, activity: { ...state.activity, [sessionID]: next } }
 }
 
 function sessionFromEvent(e: NexusEvent): SessionInfo | undefined {
@@ -184,7 +391,15 @@ function upsertToolPart(
   })
 }
 
+/**
+ * Full reducer: the message path (guarded to the active session) followed
+ * by the activity summary path (all sessions, activity slice only).
+ */
 export function applyEvent(state: NexusState, e: NexusEvent): NexusState {
+  return applyActivity(reduceEvent(state, e), e)
+}
+
+function reduceEvent(state: NexusState, e: NexusEvent): NexusState {
   const data = e.data
   switch (e.type) {
     case "server.connected":
@@ -218,11 +433,14 @@ export function applyEvent(state: NexusState, e: NexusEvent): NexusState {
       delete sessions[sessionID]
       const messages = { ...state.messages }
       delete messages[sessionID]
+      const activity = { ...state.activity }
+      delete activity[sessionID]
       const wasActive = state.activeSessionId === sessionID
       return {
         ...state,
         sessions,
         messages,
+        activity,
         sessionOrder: state.sessionOrder.filter((id) => id !== sessionID),
         ...(wasActive ? { activeSessionId: null } : {}),
       }

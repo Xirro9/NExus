@@ -25,6 +25,7 @@ import {
   savePriorities,
   type SessionPriority,
 } from "@/lib/sessionPriority"
+import type { SessionActivity } from "@/lib/agentState"
 import { applyEvent, type RefetchTarget } from "./events"
 import { FILE_EDIT_TOOLS } from "@/lib/graphify"
 import { useWorkspace } from "./workspace"
@@ -44,6 +45,10 @@ export interface NexusState {
   activeSessionId: string | null
   messages: Record<string, ChatMessage[]> // per sessionID, oldest → newest
   busy: Record<string, boolean> // sessionID → execution running
+  /** Per-session activity summary (Phase B §B1) — maintained by the pure
+   *  reducer's SUMMARY path for ALL sessions. Field-scoped: never carries
+   *  message text or deltas, so the cross-session bleed guard holds. */
+  activity: Record<string, SessionActivity>
   commands: CommandInfo[]
   agents: AgentInfo[]
   projects: ProjectInfo[]
@@ -355,6 +360,7 @@ export const useNexus = create<NexusState>()((set, get) => {
     activeSessionId: null,
     messages: {},
     busy: {},
+    activity: {},
     commands: [],
     agents: [],
     projects: [],
@@ -549,11 +555,14 @@ export const useNexus = create<NexusState>()((set, get) => {
       const prevOrder = s.sessionOrder
       const prevMessages = s.messages
       const prevPriorities = s.priorities
+      const prevActivity = s.activity
       const sessions = { ...s.sessions }
       const messages = { ...s.messages }
+      const activity = { ...s.activity }
       for (const id of removed) {
         delete sessions[id]
         delete messages[id]
+        delete activity[id]
       }
       const priorities = { ...s.priorities }
       for (const id of removed) delete priorities[id]
@@ -562,6 +571,7 @@ export const useNexus = create<NexusState>()((set, get) => {
         sessions,
         messages,
         priorities,
+        activity,
         sessionOrder: prevOrder.filter((id) => !removed.has(id)),
         ...(s.activeSessionId && removed.has(s.activeSessionId)
           ? { activeSessionId: null }
@@ -579,6 +589,7 @@ export const useNexus = create<NexusState>()((set, get) => {
           sessionOrder: prevOrder,
           messages: prevMessages,
           priorities: prevPriorities,
+          activity: prevActivity,
         })
         savePriorities(prevPriorities)
         handleApiError("delete session", err)
