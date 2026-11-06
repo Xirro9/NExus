@@ -3,6 +3,7 @@
 // markdown (SPEC-PHASE4 §8); reasoning stays plain dim italic, user input
 // stays literal whitespace-pre-wrap, tool parts stay ToolPartCard.
 
+import { resolveCopyTarget } from "@/lib/codeCopy"
 import { renderMarkdown } from "@/lib/markdown"
 import type { ChatMessage, MessagePart, TextPart } from "@/lib/opencode/types"
 import { ReasoningBlock } from "./ReasoningBlock"
@@ -19,7 +20,52 @@ function renderSource(text: string, streaming: boolean): string {
   return fenceCount % 2 === 1 ? `${text}\n\n\`\`\`` : text
 }
 
-function TextBody({
+/** Clipboard fallback shared by the markdown copy buttons (no clipboard
+ *  API → textarea + execCommand, same pattern as the agents session menu). */
+function fallbackCopy(text: string): boolean {
+  try {
+    const ta = document.createElement("textarea")
+    ta.value = text
+    document.body.appendChild(ta)
+    ta.select()
+    document.execCommand("copy")
+    ta.remove()
+    return true
+  } catch {
+    return false
+  }
+}
+
+/**
+ * Click delegation for the inert copy buttons the fence renderer emits
+ * (data-md-copy — see src/lib/markdown.ts). Copies the fenced block's <pre>
+ * text (scoped via .md-code — the button lives in the header row, the <pre>
+ * is its SIBLING under the wrapper — see src/lib/codeCopy.ts) and flips the
+ * button label; React never owns those nodes, so the feedback is a direct
+ * DOM write scoped to the button.
+ */
+function onBodyClick(e: React.MouseEvent<HTMLDivElement>) {
+  const target = e.target as HTMLElement
+  const btn = target.closest<HTMLButtonElement>("[data-md-copy]")
+  if (!btn) return
+  const code = resolveCopyTarget(btn)
+  if (code === null) return
+  const done = () => {
+    btn.textContent = "Copied"
+    setTimeout(() => {
+      btn.textContent = "Copy"
+    }, 1400)
+  }
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(code).then(done, () => {
+      if (!fallbackCopy(code)) btn.textContent = "Copy failed"
+    })
+  } else {
+    fallbackCopy(code)
+  }
+}
+
+export function TextBody({
   text,
   cursor,
   streaming,
@@ -31,9 +77,13 @@ function TextBody({
   return (
     <div
       className={`md-body md-chat${cursor ? " nexus-cursor" : ""}`}
+      onClick={onBodyClick}
       // renderMarkdown escapes raw HTML (html:false) and validates links —
-      // see src/lib/markdown.ts for the security contract
-      dangerouslySetInnerHTML={{ __html: renderMarkdown(renderSource(text, streaming)) }}
+      // see src/lib/markdown.ts for the security contract. codeCopy adds the
+      // inert copy-button node to fences (handled by onBodyClick above).
+      dangerouslySetInnerHTML={{
+        __html: renderMarkdown(renderSource(text, streaming), { codeCopy: true }),
+      }}
     />
   )
 }
@@ -48,7 +98,7 @@ function AssistantParts({
   // cursor attaches to the last part while streaming
   const lastIncomplete = streaming ? parts.length - 1 : -1
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex flex-col gap-2.5">
       {parts.map((part, i) => {
         const cursor = i === lastIncomplete
         if (part.type === "reasoning") {
@@ -81,7 +131,7 @@ export function MessageBubble({ message }: { message: ChatMessage }) {
     }
     return (
       <div className="flex justify-end">
-        <div className="max-w-[85%] rounded-xl rounded-br-sm bg-secondary px-4 py-2.5 text-secondary-foreground shadow-sm shadow-black/20">
+        <div className="max-w-[85%] rounded-xl rounded-br-sm bg-secondary px-4 py-3 text-secondary-foreground shadow-sm shadow-black/20">
           <div className="whitespace-pre-wrap">{text}</div>
         </div>
       </div>
@@ -91,7 +141,7 @@ export function MessageBubble({ message }: { message: ChatMessage }) {
   if (message.role === "assistant") {
     return (
       <div className="flex justify-start">
-        <div className="max-w-[85%] rounded-xl rounded-bl-sm border border-border/70 bg-card/40 px-4 py-2.5">
+        <div className="max-w-[85%] rounded-xl rounded-bl-sm border border-border/60 bg-card/40 px-4 py-3">
           <AssistantParts parts={message.parts} streaming={message.streaming === true} />
         </div>
       </div>

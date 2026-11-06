@@ -160,6 +160,11 @@ function toChatMessage(raw: Record<string, unknown>): ChatMessage {
           status: typeof state.status === "string" ? state.status : "unknown",
           ...(state.input !== undefined ? { input: state.input } : {}),
           ...(state.output !== undefined ? { output: state.output } : {}),
+          // passthrough matches the SSE reducer (events.ts) so freshly-loaded
+          // sessions render patch excerpts / subagent links like live ones
+          ...(state.metadata !== undefined
+            ? { metadata: state.metadata as Record<string, unknown> }
+            : {}),
         },
       })
     }

@@ -53,6 +53,18 @@ describe("formatToolCall — known tools", () => {
     expect(d.detail!.endsWith("…")).toBe(true)
   })
 
+  it("shell (live-verified lowercase name): bash-kind rendering, name-derived title", () => {
+    const d = formatToolCall("shell", { command: "npm test" }, { exit: 0 })
+    expect(d).toMatchObject({
+      title: "Shell", // derived from the tool name, not hardcoded "Bash"
+      detail: "npm test",
+      kind: "bash",
+      filePaths: [],
+    })
+    // command key is picked up like bash, so the card shows command+output
+    expect(extractFilePaths("shell", { command: "ls" }, undefined)).toEqual([])
+  })
+
   it("grep/glob: pattern as detail, no file paths", () => {
     const grep = formatToolCall("grep", { pattern: "applyEvent" }, undefined)
     expect(grep).toMatchObject({ title: "Grep", detail: "applyEvent", kind: "grep", filePaths: [] })

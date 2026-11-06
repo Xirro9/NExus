@@ -61,6 +61,9 @@ export interface NexusState {
   /** Jerry-side organizational priorities (localStorage-persisted). NEVER
    *  affects inference scheduling — OpenCode v2.2.5 has no priority API. */
   priorities: Record<string, SessionPriority>
+  /** Chat render mode (C2, localStorage-persisted): clean conversation with
+   *  compact tool cards, or the technical activity timeline. */
+  chatViewMode: ChatViewMode
   // internal scheduling markers consumed by the applyEvent wrapper (§4)
   pendingReconcile: { sessionID: string; at: number } | null
   pendingRefetch: RefetchTarget[]
@@ -89,6 +92,8 @@ export interface NexusState {
   deleteSession(sessionID: string): Promise<void>
   /** Set the Jerry-side organizational priority (normal = unset). */
   setSessionPriority(sessionID: string, priority: SessionPriority): void
+  /** Switch the chat render mode (C2) — persists to localStorage. */
+  setChatViewMode(mode: ChatViewMode): void
   /** Re-fetch the pending permission list (drawer open, manual refresh). */
   refreshPermissions(): Promise<void>
   /** Agents-graph reconciliation poll (5 s, Agents-tab-visible only, §2.2):
@@ -112,6 +117,35 @@ export interface NexusState {
   setSessionModel(providerID: string, modelID: string, variant?: string): Promise<void>
   resync(): Promise<void>
   applyEvent(e: NexusEvent): void
+}
+
+// ---------------------------------------------------------------------------
+// chat view mode (C2) — Jerry-side UI preference, localStorage-persisted
+// (same pattern as sessionPriority: validated load, save-on-change)
+
+export type ChatViewMode = "conversation" | "activity"
+
+const CHAT_VIEW_STORAGE_KEY = "nexus.chatViewMode.v1"
+
+function isChatViewMode(v: unknown): v is ChatViewMode {
+  return v === "conversation" || v === "activity"
+}
+
+function loadChatViewMode(): ChatViewMode {
+  try {
+    const raw = localStorage.getItem(CHAT_VIEW_STORAGE_KEY)
+    return isChatViewMode(raw) ? raw : "conversation"
+  } catch {
+    return "conversation"
+  }
+}
+
+function saveChatViewMode(mode: ChatViewMode): void {
+  try {
+    localStorage.setItem(CHAT_VIEW_STORAGE_KEY, mode)
+  } catch {
+    // quota/private-mode — the preference degrades to session-scoped
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -369,6 +403,7 @@ export const useNexus = create<NexusState>()((set, get) => {
     activeProjectId: null,
     toast: null,
     priorities: loadPriorities(),
+    chatViewMode: loadChatViewMode(),
     pendingReconcile: null,
     pendingRefetch: [],
     pendingPermissions: 0,
@@ -604,6 +639,12 @@ export const useNexus = create<NexusState>()((set, get) => {
       else priorities[sessionID] = priority
       savePriorities(priorities)
       set({ priorities })
+    },
+
+    setChatViewMode(mode) {
+      if (!isChatViewMode(mode)) return
+      saveChatViewMode(mode)
+      set({ chatViewMode: mode })
     },
 
     async refreshPermissions() {

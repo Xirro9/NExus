@@ -4,12 +4,20 @@
 import { useCallback, useEffect, useRef, useState } from "react"
 import { motion, useReducedMotion } from "motion/react"
 import type { ChatMessage } from "@/lib/opencode/types"
+import type { ChatViewMode } from "@/store/nexus"
 import { ArrowDown } from "lucide-react"
+import { ActivityTimeline } from "./ActivityTimeline"
 import { MessageBubble } from "./MessageBubble"
 
 const PIN_THRESHOLD_PX = 80
 
-export function MessageList({ messages }: { messages: ChatMessage[] }) {
+export function MessageList({
+  messages,
+  mode,
+}: {
+  messages: ChatMessage[]
+  mode: ChatViewMode
+}) {
   const scrollRef = useRef<HTMLDivElement>(null)
   const pinnedRef = useRef(true)
   const [showJump, setShowJump] = useState(false)
@@ -36,12 +44,18 @@ export function MessageList({ messages }: { messages: ChatMessage[] }) {
     if (pinnedRef.current) scrollToBottom()
   }, [messages, scrollToBottom])
 
+  // mode switch (C2): same scroll container, keyed inner render — a pinned
+  // view stays pinned (the new content height lands us back at the bottom)
+  useEffect(() => {
+    if (pinnedRef.current) scrollToBottom()
+  }, [mode, scrollToBottom])
+
   return (
     <div className="relative min-h-0 flex-1">
       <div
         ref={scrollRef}
         onScroll={onScroll}
-        className="h-full overflow-y-auto px-4 py-5"
+        className="h-full overflow-y-auto px-5 py-6 sm:px-6"
       >
         {messages.length === 0 ? (
           <div className="flex h-full items-center justify-center">
@@ -49,8 +63,12 @@ export function MessageList({ messages }: { messages: ChatMessage[] }) {
               Nothing here yet — say hi to Jerry.
             </p>
           </div>
+        ) : mode === "activity" ? (
+          // keyed render switch inside the shared container — scroll position
+          // and the pin-to-bottom refs live on the container, not the children
+          <ActivityTimeline messages={messages} />
         ) : (
-          <div className="mx-auto flex max-w-3xl flex-col gap-3.5 pb-1">
+          <div className="mx-auto flex max-w-3xl flex-col gap-4 pb-1">
             {messages.map((m, i) => (
               // only the newest bubble animates — no mass entrance on session switch
               <motion.div

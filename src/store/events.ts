@@ -181,9 +181,14 @@ function applyActivity(state: NexusState, e: NexusEvent): NexusState {
     case "session.execution.succeeded":
     case "session.execution.failed":
     case "session.execution.interrupted": {
-      // outcomeOverride: the session record's outcome only heals on refetch
+      // outcomeOverride: the session record's outcome only heals on refetch.
+      // The run is over — clear the current-tool label so an interrupted or
+      // failed session never shows a stale tool in the UI.
       const prev = state.activity[sessionID]
-      const patch: Partial<SessionActivity> = {}
+      const patch: Partial<SessionActivity> = {
+        currentTool: null,
+        currentToolSince: null,
+      }
       if (e.type === "session.execution.failed") {
         patch.lastError = errorText(data) ?? prev?.lastError ?? null
       }

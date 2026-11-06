@@ -257,6 +257,32 @@ describe("activity summary path", () => {
     expect(stopped.activity[SID]!.state).toBe("interrupted")
   })
 
+  it("execution ending events clear a stale currentTool label", () => {
+    // a mid-tool interrupt/fail must not leave the tool name hanging in the UI
+    for (const ending of [
+      "session.execution.interrupted",
+      "session.execution.failed",
+      "session.execution.succeeded",
+    ] as const) {
+      const state = apply(
+        makeState(),
+        makeEvent("session.execution.started", { sessionID: SID }, 1_000),
+        makeEvent("session.tool.called", {
+          sessionID: SID,
+          assistantMessageID: "msg_1",
+          id: "tool_1",
+          name: "bash",
+          input: { command: "sleep 100" },
+        }, 1_100),
+        makeEvent(ending, { sessionID: SID }, 1_200),
+      )
+      const a = state.activity[SID]!
+      expect(a.currentTool).toBeNull()
+      expect(a.currentToolSince).toBeNull()
+      expect(a.lastEventAt).toBe(1_200)
+    }
+  })
+
   it("tool failure records lastError when the event carries text", () => {
     const state = apply(
       makeState(),

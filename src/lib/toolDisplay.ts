@@ -29,6 +29,9 @@ const TOOL_KINDS: Record<string, ToolKind> = {
   edit: "edit",
   write: "write",
   bash: "bash",
+  // live-verified: the shell tool emits lowercase `shell` — same
+  // command+output rendering as bash
+  shell: "bash",
   grep: "grep",
   glob: "glob",
   subagent: "subagent",
@@ -151,8 +154,9 @@ export function formatToolCall(
     }
     case "bash": {
       const command = firstCommand(input)
+      // title from the tool name (`bash` → Bash, `shell` → Shell)
       return {
-        title: "Bash",
+        title: capitalize(label),
         ...(command ? { detail: truncate(command) } : {}),
         filePaths,
         kind,

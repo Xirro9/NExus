@@ -348,6 +348,84 @@
 /* loose lists (blank line between items): keep the bubble's tight rhythm */
 .md-chat li > p { margin: 0.2em 0; }
 
+/* ---------------------------------------------------------------------------
+ * Fenced code blocks (C1, Phase C designer pass) — the fence renderer wraps
+ * every block in .md-code with a header row (lang label + inert copy button,
+ * data-md-copy, click-delegated in MessageBubble). The wrapper owns the
+ * surface: sunken well, hairline header, no double borders.
+ * ------------------------------------------------------------------------- */
+.md-code {
+  margin: 0.7em 0;
+  overflow: hidden;
+  border: 1px solid color-mix(in oklab, var(--border) 55%, transparent);
+  border-radius: 0.5rem;
+  background: color-mix(in oklab, var(--background) 55%, transparent);
+}
+.md-code-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.3rem 0.4rem 0.3rem 0.75rem;
+  border-bottom: 1px solid color-mix(in oklab, var(--border) 40%, transparent);
+  background: color-mix(in oklab, var(--card) 40%, transparent);
+}
+.md-code-lang {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: color-mix(in oklab, var(--muted-foreground) 75%, transparent);
+}
+.md-code pre {
+  margin: 0;
+  border: none;
+  border-radius: 0;
+  background: none;
+  padding: 0;
+}
+.md-code pre code { display: block; padding: 0.6rem 0.75rem; }
+.md-code-copy {
+  padding: 0.1rem 0.5rem;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 10px;
+  color: var(--muted-foreground);
+  background: transparent;
+  border: 1px solid color-mix(in oklab, var(--border) 60%, transparent);
+  border-radius: 0.25rem;
+  cursor: pointer;
+  opacity: 0.8;
+  transition: color 0.15s ease, border-color 0.15s ease, opacity 0.15s ease;
+}
+.md-code-copy:hover {
+  color: var(--foreground);
+  border-color: var(--border);
+  opacity: 1;
+}
+
+/* sugar-high token palette (dark theme, Jerry identity — violet keywords,
+   cyan strings, amber types, green JSX literals) — consumed via inline
+   color:var(--sh-*) styles the highlighter emits. All tokens ≥4.5:1 on the
+   code-well surface. */
+.md-body pre, .md-chat pre {
+  --sh-keyword: #c99dfa;
+  --sh-string: #7ce8d8;
+  --sh-comment: #7b8598;
+  --sh-class: #f0c67e;
+  --sh-property: #9ecfff;
+  --sh-entity: #d9b8ff;
+  --sh-jsxliterals: #8ce99a;
+  --sh-sign: #8b949e;
+  --sh-identifier: #dde4ee;
+}
+
+/* patch excerpts in tool cards — diff-like line tinting (Phase C) */
+.diff-add { color: var(--success); background: color-mix(in oklab, var(--success) 7%, transparent); }
+.diff-del { color: var(--destructive); background: color-mix(in oklab, var(--destructive) 8%, transparent); }
+.diff-hunk { color: color-mix(in oklab, var(--primary) 85%, transparent); }
+.diff-meta { color: color-mix(in oklab, var(--muted-foreground) 65%, transparent); }
+.md-body .sh__line, .md-chat .sh__line { display: inline-block; width: 100%; }
+
 /* xyflow overrides scoped to match the Nexus tokens (SPEC-PHASE3 §10) */
 .react-flow {
   --xy-background-color: transparent;

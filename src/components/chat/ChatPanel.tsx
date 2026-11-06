@@ -1,6 +1,6 @@
 // Chat orchestration: header + message list + composer, or the empty state.
 
-import { useActiveMessages, useActiveSession, useIsBusy } from "@/store/selectors"
+import { useActiveMessages, useActiveSession, useIsBusy, useSessionActivity } from "@/store/selectors"
 import { useNexus } from "@/store/nexus"
 import { AiCore } from "@/components/rail/AiCore"
 import { Plus } from "lucide-react"
@@ -12,6 +12,9 @@ export function ChatPanel() {
   const session = useActiveSession()
   const messages = useActiveMessages()
   const busy = useIsBusy()
+  const viewMode = useNexus((s) => s.chatViewMode)
+  const setChatViewMode = useNexus((s) => s.setChatViewMode)
+  const activity = useSessionActivity(session?.id ?? null)
   const sendPrompt = useNexus((s) => s.sendPrompt)
   const interruptActive = useNexus((s) => s.interruptActive)
   const newSession = useNexus((s) => s.newSession)
@@ -51,9 +54,13 @@ export function ChatPanel() {
       <ChatHeader
         session={session}
         busy={busy}
+        runState={activity.state}
+        currentTool={activity.currentTool}
+        viewMode={viewMode}
+        onViewModeChange={setChatViewMode}
         onInterrupt={() => void interruptActive()}
       />
-      <MessageList messages={messages} />
+      <MessageList messages={messages} mode={viewMode} />
       <div className="border-t border-border/70 p-3 pb-4">
         <Composer
           disabled={false}
