@@ -3,7 +3,7 @@
 // View mounting rules (SPEC-PHASE3 §1):
 //  - ChatPanel: stays mounted + hidden (Phase 2 rule) — scroll + SSE untouched
 //  - DashboardView: lazy-mount on first open, stays mounted with `visible`
-//  - Agents/History/Projects/System: lazy-mount on first open AND unmount on
+//  - Agents/Activity/History/Projects/System/Settings: lazy-mount on first open AND unmount on
 //    tab leave (xyflow zero-measure guard; no streaming state worth keeping —
 //    stores persist the data so remounts are instant)
 //  - every view is React.lazy so view code never enters the main chunk
@@ -26,6 +26,9 @@ import { MainTabs, type MainView } from "./MainTabs"
 import { Sidebar } from "./Sidebar"
 import { StatusRail } from "@/components/rail/StatusRail"
 
+const ActivityView = lazy(() =>
+  import("@/components/activity/ActivityView").then((m) => ({ default: m.ActivityView })),
+)
 const AgentGraphView = lazy(() =>
   import("@/components/agents/AgentGraphView").then((m) => ({ default: m.AgentGraphView })),
 )
@@ -37,6 +40,9 @@ const ProjectsView = lazy(() =>
 )
 const SystemView = lazy(() =>
   import("@/components/system/SystemView").then((m) => ({ default: m.SystemView })),
+)
+const SettingsView = lazy(() =>
+  import("@/components/settings/SettingsView").then((m) => ({ default: m.SettingsView })),
 )
 
 const RAIL_KEY = "nexus.railCollapsed"
@@ -54,7 +60,7 @@ export function AppShell() {
   const [mainView, setMainView] = useState<MainView>(() => {
     const stored = localStorage.getItem(MAIN_VIEW_KEY) ?? ""
     // unknown stored values fall back to "chat" (§1)
-    return (["chat", "dashboard", "agents", "history", "projects", "system"] as const).includes(
+    return (["chat", "dashboard", "activity", "agents", "history", "projects", "system", "settings"] as const).includes(
       stored as MainView,
     )
       ? (stored as MainView)
@@ -106,7 +112,7 @@ export function AppShell() {
     <div className="flex h-screen flex-col overflow-hidden bg-background text-foreground">
       {status !== "online" && <DegradedBanner status={status} />}
       <div className="grid min-h-0 flex-1 grid-cols-[280px_1fr] lg:grid-cols-[280px_1fr_260px]">
-        <Sidebar onInspect={inspectSession} />
+        <Sidebar onInspect={inspectSession} view={mainView} onNavigate={changeView} />
         <main className="flex min-h-0 min-w-0 flex-col">
           <MainTabs
             view={mainView}
@@ -121,6 +127,11 @@ export function AppShell() {
             </div>
             {dashboardMounted && <DashboardView visible={mainView === "dashboard"} />}
             {/* lazy-mount AND unmount on tab leave (xyflow zero-measure, §1) */}
+            {mainView === "activity" && (
+              <Suspense>
+                <ActivityView onOpenSession={openSessionInChat} />
+              </Suspense>
+            )}
             {mainView === "agents" && (
               <Suspense>
                 <AgentGraphView onOpenSession={openSessionInChat} />
@@ -139,6 +150,11 @@ export function AppShell() {
             {mainView === "system" && (
               <Suspense>
                 <SystemView />
+              </Suspense>
+            )}
+            {mainView === "settings" && (
+              <Suspense>
+                <SettingsView />
               </Suspense>
             )}
           </div>

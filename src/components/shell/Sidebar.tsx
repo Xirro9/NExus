@@ -1,27 +1,48 @@
-// Sidebar: brand row, new-session, project filter, session list with children
+// Sidebar: brand row, destination nav (VNEXT Phase E2: Workspace/Operations/
+// System groups), new-session, project filter, session list with children
 // grouped under their parent roots (SPEC-PHASE3 §9.1). Store-driven.
+//
+// Destination nav switches the MainView via AppShell's changeView callback —
+// MainTabs stays the fine-grained switcher; the sidebar is the map.
 //
 // Grouping rules: children (parentID set) whose parent IS loaded nest under
 // it (collapsed by default); children whose parent is outside the 50-session
 // window render at top level with an agent chip.
 
-import { useMemo, useState } from "react"
-import { Folder, Plus } from "lucide-react"
+import { useMemo, useState, type ReactNode } from "react"
+import {
+  Activity,
+  Cpu,
+  Folder,
+  FolderOpen,
+  MessageSquare,
+  Network,
+  Plus,
+  Settings,
+} from "lucide-react"
 
 import { useNexus } from "@/store/nexus"
 import { useStatus } from "@/store/selectors"
+import { useWorkspace } from "@/store/workspace"
 import type { SessionInfo } from "@/lib/opencode/types"
 import { useSessionActions } from "@/components/agents/sessionActions"
 
 import { ConnectionBadge } from "./ConnectionBadge"
 import { ModelSelect } from "./ModelSelect"
 import { SessionListItem } from "./SessionListItem"
+import type { MainView } from "./MainTabs"
 
 export function Sidebar({
   onInspect,
+  view,
+  onNavigate,
 }: {
   /** Inspect Agent (P0 context menu) → Agents tab with the node selected. */
   onInspect?(id: string): void
+  /** current main view — drives the nav active state */
+  view?: MainView
+  /** switch the main view (AppShell's changeView) */
+  onNavigate?(v: MainView): void
 }) {
   const status = useStatus()
   const version = useNexus((s) => s.connection.version)
@@ -32,6 +53,12 @@ export function Sidebar({
   const projects = useNexus((s) => s.projects)
   const activeProjectId = useNexus((s) => s.activeProjectId)
   const newSession = useNexus((s) => s.newSession)
+  // any live execution → quiet pulse on the Activity destination (cyan=live).
+  // Same running signal the Activity view uses: Jerry's busy map OR the
+  // server-truth active map (busy alone misses server-side running sessions).
+  const activeMap = useWorkspace((s) => s.activeMap)
+  const anyRunning =
+    Object.values(busy).some(Boolean) || Object.keys(activeMap ?? {}).length > 0
   // expanded parent ids (collapsed by default, §9.1)
   const [expanded, setExpanded] = useState<Set<string>>(() => new Set())
 
@@ -103,6 +130,62 @@ export function Sidebar({
           New session
         </button>
       </div>
+
+      {/* destination nav (VNEXT Phase E2): primary places, grouped. Icons
+          match the surfaces they open; active treatment mirrors the session
+          rows (bg-secondary + hairline ring). */}
+      <nav aria-label="Destinations" className="shrink-0 px-2 pb-1">
+        <NavGroup label="Workspace">
+          <NavItem
+            icon={FolderOpen}
+            label="Projects"
+            active={view === "projects"}
+            onClick={() => onNavigate?.("projects")}
+          />
+          <NavItem
+            icon={MessageSquare}
+            label="Sessions"
+            active={view === "chat"}
+            onClick={() => onNavigate?.("chat")}
+          />
+        </NavGroup>
+        <NavGroup label="Operations">
+          <NavItem
+            icon={Network}
+            label="Agents"
+            active={view === "agents"}
+            onClick={() => onNavigate?.("agents")}
+          />
+          <NavItem
+            icon={Activity}
+            label="Activity"
+            active={view === "activity"}
+            onClick={() => onNavigate?.("activity")}
+            trailing={
+              anyRunning ? (
+                <span
+                  className="nexus-dot-live size-1.5 rounded-full bg-primary shadow-[var(--glow-primary)]"
+                  aria-hidden
+                />
+              ) : undefined
+            }
+          />
+        </NavGroup>
+        <NavGroup label="System">
+          <NavItem
+            icon={Cpu}
+            label="System"
+            active={view === "system"}
+            onClick={() => onNavigate?.("system")}
+          />
+          <NavItem
+            icon={Settings}
+            label="Settings"
+            active={view === "settings"}
+            onClick={() => onNavigate?.("settings")}
+          />
+        </NavGroup>
+      </nav>
 
       {/* project filter */}
       <div className="px-3 pb-3">
@@ -218,5 +301,52 @@ export function Sidebar({
       </nav>
       {actions.overlays}
     </aside>
+  )
+}
+
+/** Grouped destinations — same label voice as the "Sessions" list header. */
+function NavGroup({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div className="pb-1.5 pt-2 first:pt-0.5">
+      <h2 className="px-2 pb-1 text-[11px] font-medium tracking-wider text-muted-foreground uppercase">
+        {label}
+      </h2>
+      <ul className="space-y-0.5">{children}</ul>
+    </div>
+  )
+}
+
+function NavItem({
+  icon: Icon,
+  label,
+  active,
+  onClick,
+  trailing,
+}: {
+  icon: (props: { className?: string; "aria-hidden"?: boolean }) => ReactNode
+  label: string
+  active: boolean
+  onClick(): void
+  /** optional right-edge slot (live dot, count…) */
+  trailing?: ReactNode
+}) {
+  return (
+    <li>
+      <button
+        type="button"
+        onClick={onClick}
+        aria-current={active ? "page" : undefined}
+        className={
+          "flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-[13px] transition-colors duration-150 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-primary/50 " +
+          (active
+            ? "bg-secondary font-medium text-secondary-foreground ring-1 ring-border/60"
+            : "text-muted-foreground hover:bg-secondary/50 hover:text-foreground")
+        }
+      >
+        <Icon className="size-3.5 shrink-0" aria-hidden />
+        <span className="min-w-0 flex-1 truncate">{label}</span>
+        {trailing}
+      </button>
+    </li>
   )
 }

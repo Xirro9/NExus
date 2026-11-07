@@ -8,6 +8,7 @@
 import { ChevronDown, ChevronRight, MoreVertical } from "lucide-react"
 
 import type { SessionInfo } from "@/lib/opencode/types"
+import { useWorkspace } from "@/store/workspace"
 
 function relativeTime(ts: number): string {
   const diff = Date.now() - ts
@@ -46,6 +47,12 @@ export function SessionListItem({
   /** visible kebab → the same menu, for touch/keyboard users (P0) */
   onActionsClick?(e: { clientX: number; clientY: number; preventDefault(): void; stopPropagation(): void }): void
 }) {
+  // Running = Jerry's busy signal OR the server-truth active map — busy
+  // alone misses server-side running sessions this client hasn't seen busy
+  // yet (same rule the Activity view uses). Read-only store subscription;
+  // activeMap is a stable store reference (set once per refresh).
+  const activeMap = useWorkspace((s) => s.activeMap)
+  const running = busy || activeMap?.[session.id] != null
   return (
     <div
       role="button"
@@ -72,9 +79,9 @@ export function SessionListItem({
       }
     >
       <div className="flex items-center gap-2">
-        {/* dot slot always present so titles never shift when busy flips */}
+        {/* dot slot always present so titles never shift when running flips */}
         <span className="flex size-1.5 shrink-0 items-center justify-center">
-          {busy && (
+          {running && (
             <span className="size-1.5 animate-pulse rounded-full bg-primary shadow-[var(--glow-primary)]" />
           )}
         </span>

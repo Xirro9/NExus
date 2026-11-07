@@ -7,6 +7,9 @@ import { TriangleAlert } from "lucide-react"
 
 export interface PanelCardProps {
   title: string
+  /** optional small icon before the title — kind-tinted by the caller
+   *  (cyan=live, amber=needs-you, red=error, neutral=inspection) */
+  icon?: ReactNode
   right?: ReactNode
   /** dim the body while still rendering it (last-good-data freeze) */
   dim?: boolean
@@ -15,7 +18,7 @@ export interface PanelCardProps {
   children?: ReactNode
 }
 
-export function PanelCard({ title, right, dim, degraded, children }: PanelCardProps) {
+export function PanelCard({ title, icon, right, dim, degraded, children }: PanelCardProps) {
   const reduceMotion = useReducedMotion()
   const showDegraded = degraded !== undefined && !degraded.ok
   return (
@@ -29,7 +32,8 @@ export function PanelCard({ title, right, dim, degraded, children }: PanelCardPr
       }
     >
       <header className="mb-3 flex shrink-0 items-center justify-between gap-2">
-        <h3 className="text-[11px] font-semibold tracking-wider text-muted-foreground uppercase">
+        <h3 className="flex items-center gap-1.5 text-[11px] font-semibold tracking-wider text-muted-foreground uppercase">
+          {icon}
           {title}
         </h3>
         {right}

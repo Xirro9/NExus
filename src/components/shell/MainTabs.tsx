@@ -1,8 +1,10 @@
 // Main-area view switcher (SPEC-PHASE3 §1): Chat | Dashboard | Agents |
-// History | Projects | System, plus a permission shield button that opens the
-// slide-over drawer from anywhere. The active view is persisted to
-// localStorage["nexus.mainView"]; the underline animates 150 ms (layoutId
-// shared element), disabled under prefers-reduced-motion.
+// History | Projects | System | Settings, plus a permission shield button
+// that opens the slide-over drawer from anywhere. The active view is
+// persisted to localStorage["nexus.mainView"]; the underline animates 150 ms
+// (layoutId shared element), disabled under prefers-reduced-motion.
+// VNEXT Phase E2: the sidebar carries the primary destinations (Workspace/
+// Operations/System groups); MainTabs stays the fine-grained switcher.
 
 import { motion, useReducedMotion } from "motion/react"
 import { ShieldAlert } from "lucide-react"
@@ -12,18 +14,22 @@ import { useNexus } from "@/store/nexus"
 export type MainView =
   | "chat"
   | "dashboard"
+  | "activity"
   | "agents"
   | "history"
   | "projects"
   | "system"
+  | "settings"
 
 const TABS: { id: MainView; label: string }[] = [
   { id: "chat", label: "Chat" },
   { id: "dashboard", label: "Dashboard" },
+  { id: "activity", label: "Activity" },
   { id: "agents", label: "Agents" },
   { id: "history", label: "History" },
   { id: "projects", label: "Projects" },
   { id: "system", label: "System" },
+  { id: "settings", label: "Settings" },
 ]
 
 export function MainTabs({
