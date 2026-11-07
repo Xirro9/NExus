@@ -49,6 +49,11 @@ export interface NexusState {
    *  reducer's SUMMARY path for ALL sessions. Field-scoped: never carries
    *  message text or deltas, so the cross-session bleed guard holds. */
   activity: Record<string, SessionActivity>
+  /** toolCallID → pending tool-name correlation (see PendingToolName).
+   *  Maintained by the SUMMARY path for ALL sessions; bounded by
+   *  PENDING_TOOL_NAMES_CAP, entries released on tool success/failed and
+   *  pruned when a session is removed. */
+  pendingToolNames: Record<string, PendingToolName>
   commands: CommandInfo[]
   agents: AgentInfo[]
   projects: ProjectInfo[]
@@ -122,6 +127,18 @@ export interface NexusState {
   setSessionModel(providerID: string, modelID: string, variant?: string): Promise<void>
   resync(): Promise<void>
   applyEvent(e: NexusEvent): void
+}
+
+/** Correlation record for resolving a tool call's name: the live server
+ *  sends the tool name ONLY on session.tool.input.started, while tool.called
+ *  / .success / .failed carry just the tool-call id (verified against
+ *  opencode v2.2.5 SSE). Reference-only — name + ids + timestamp, never
+ *  input/output payloads (bleed guard). Owned by the pure reducer's SUMMARY
+ *  path; see events.ts for the cap and release rules. */
+export interface PendingToolName {
+  name: string
+  sessionID: string
+  at: number
 }
 
 // ---------------------------------------------------------------------------
@@ -400,6 +417,7 @@ export const useNexus = create<NexusState>()((set, get) => {
     messages: {},
     busy: {},
     activity: {},
+    pendingToolNames: {},
     commands: [],
     agents: [],
     projects: [],
@@ -610,9 +628,16 @@ export const useNexus = create<NexusState>()((set, get) => {
       const prevMessages = s.messages
       const prevPriorities = s.priorities
       const prevActivity = s.activity
+      const prevPendingToolNames = s.pendingToolNames
       const sessions = { ...s.sessions }
       const messages = { ...s.messages }
       const activity = { ...s.activity }
+      // pending tool-name correlations for removed sessions are released
+      // (entries for surviving sessions — e.g. children of a child — stay)
+      const pendingToolNames = { ...s.pendingToolNames }
+      for (const [toolCallID, entry] of Object.entries(s.pendingToolNames)) {
+        if (removed.has(entry.sessionID)) delete pendingToolNames[toolCallID]
+      }
       for (const id of removed) {
         delete sessions[id]
         delete messages[id]
@@ -626,6 +651,7 @@ export const useNexus = create<NexusState>()((set, get) => {
         messages,
         priorities,
         activity,
+        pendingToolNames,
         sessionOrder: prevOrder.filter((id) => !removed.has(id)),
         ...(s.activeSessionId && removed.has(s.activeSessionId)
           ? { activeSessionId: null }
@@ -644,6 +670,7 @@ export const useNexus = create<NexusState>()((set, get) => {
           messages: prevMessages,
           priorities: prevPriorities,
           activity: prevActivity,
+          pendingToolNames: prevPendingToolNames,
         })
         savePriorities(prevPriorities)
         handleApiError("delete session", err)
@@ -794,9 +821,23 @@ export const useNexus = create<NexusState>()((set, get) => {
       }
       // Graphify staleness bridge: a file-mutating tool call in ANY session
       // marks that project's knowledge graph dirty (workspace-owned state —
-      // lives there to avoid an import cycle; see docs/NOTES-SESSIONS-GRAPHIFY)
+      // lives there to avoid an import cycle; see docs/NOTES-SESSIONS-GRAPHIFY).
+      // Live tool.called carries NO name — resolve via the same correlation
+      // rule the reducer just used (literal name wins, else pendingToolNames;
+      // the entry is still present here — it is only released on success/failed).
       if (e.type === "session.tool.called") {
-        const { sessionID, name } = e.data as { sessionID?: unknown; name?: unknown }
+        const { sessionID, name: literalName, id } = e.data as {
+          sessionID?: unknown
+          name?: unknown
+          id?: unknown
+        }
+        const pending = typeof id === "string" ? next.pendingToolNames[id] : undefined
+        const name =
+          typeof literalName === "string"
+            ? literalName
+            : pending && pending.sessionID === sessionID
+              ? pending.name
+              : null
         if (
           typeof sessionID === "string" &&
           typeof name === "string" &&

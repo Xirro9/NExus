@@ -4,7 +4,7 @@
 
 import { describe, expect, it } from "vitest"
 
-import { applyEvent } from "@/store/events"
+import { applyEvent, PENDING_TOOL_NAMES_CAP } from "@/store/events"
 import type { NexusState } from "@/store/nexus"
 import type { NexusEvent } from "@/lib/opencode/sse"
 import type { SessionInfo } from "@/lib/opencode/types"
@@ -62,6 +62,7 @@ function makeState(): NexusState {
     messages: {},
     busy: {},
     activity: {},
+    pendingToolNames: {},
     commands: [],
     agents: [],
     projects: [],
@@ -529,5 +530,254 @@ describe("activity summary path", () => {
       makeEvent("server.connected", {}),
     )
     expect(state.activity).toEqual({})
+  })
+})
+
+// ---------------------------------------------------------------------------
+// pendingToolNames correlation — the LIVE wire format (opencode v2.2.5 SSE
+// capture): session.tool.input.started is the ONLY event carrying the tool
+// name; tool.called / .success / .failed carry just the tool-call id.
+// Fixtures below use the REAL captured shapes, not the legacy synthetic ones.
+
+describe("pendingToolNames correlation (live wire format)", () => {
+  it("WIRE FORMAT: input.started {id,name} → tool.called {id,input,NO name} resolves on a NON-active session", () => {
+    const state = apply(
+      makeState(),
+      makeEvent("session.execution.started", { sessionID: SID }, 900),
+      // real capture: { sessionID, assistantMessageID, id, name }
+      makeEvent("session.tool.input.started", {
+        sessionID: SID,
+        assistantMessageID: "msg_1",
+        id: "s2sbox_call_1",
+        name: "shell",
+      }, 1_000),
+      // real capture: { sessionID, id, delta } — no assistantMessageID
+      makeEvent("session.tool.input.delta", {
+        sessionID: SID,
+        id: "s2sbox_call_1",
+        delta: "{\"command\":\"ls\"}",
+      }, 1_050),
+      // real capture: { sessionID, assistantMessageID, id, input, executed } — NO name
+      makeEvent("session.tool.called", {
+        sessionID: SID,
+        assistantMessageID: "msg_1",
+        id: "s2sbox_call_1",
+        input: { command: "ls" },
+        executed: false,
+      }, 1_100),
+    )
+    const a = state.activity[SID]!
+    expect(a.currentTool).toBe("shell")
+    expect(a.currentToolSince).toBe(1_100)
+    expect(a.toolsRun).toBe(1)
+    expect(a.lastActivityKind).toBe("tool")
+    expect(a.recentTools).toEqual([{ name: "shell", at: 1_100 }])
+    expect(a.state).toBe("executing-tools")
+    // correlation slice: reference only (no input payload)
+    expect(state.pendingToolNames["s2sbox_call_1"]).toEqual({
+      name: "shell",
+      sessionID: SID,
+      at: 1_000,
+    })
+    // bleed guard: the summary path never materialized message content
+    expect(state.messages[SID]).toBeUndefined()
+  })
+
+  it("tool.success resolves via the correlation, then CLEARS the entry", () => {
+    const state = apply(
+      makeState(),
+      makeEvent("session.tool.input.started", {
+        sessionID: SID,
+        id: "call_1",
+        name: "edit",
+      }, 1_000),
+      // real capture: { sessionID, assistantMessageID, id, content, metadata } — NO name
+      makeEvent("session.tool.success", {
+        sessionID: SID,
+        assistantMessageID: "msg_1",
+        id: "call_1",
+        content: [{ type: "text", text: "ok" }],
+        metadata: { files: [{ file: "/src/b.ts" }] },
+      }, 1_100),
+    )
+    expect(state.pendingToolNames["call_1"]).toBeUndefined()
+    // metadata file extraction still worked with the resolved name
+    expect(state.activity[SID]!.filesTouched).toEqual(["/src/b.ts"])
+    // a later called with the SAME id now resolves unknown — no fabrication
+    const again = apply(
+      state,
+      makeEvent("session.tool.called", {
+        sessionID: SID,
+        assistantMessageID: "msg_1",
+        id: "call_1",
+        input: {},
+        executed: false,
+      }, 1_200),
+    )
+    const a = again.activity[SID]!
+    expect(a.toolsRun).toBe(1) // the unknown-name called still bumped it
+    expect(a.currentTool).toBeNull()
+    expect(a.recentTools).toEqual([])
+  })
+
+  it("tool.failed also clears the pending correlation entry", () => {
+    const state = apply(
+      makeState(),
+      makeEvent("session.tool.input.started", {
+        sessionID: SID,
+        id: "call_1",
+        name: "bash",
+      }, 1_000),
+      makeEvent("session.tool.failed", {
+        sessionID: SID,
+        assistantMessageID: "msg_1",
+        id: "call_1",
+        content: [{ type: "text", text: "boom" }],
+      }, 1_100),
+    )
+    expect(state.pendingToolNames["call_1"]).toBeUndefined()
+    expect(state.activity[SID]!.lastError).toBe("boom")
+  })
+
+  it("unknown-name called (no input.started seen): real signals bump, nothing fabricated", () => {
+    const state = apply(
+      makeState(),
+      makeEvent("session.execution.started", { sessionID: SID }, 900),
+      // real capture shape — no name anywhere before this
+      makeEvent("session.tool.called", {
+        sessionID: SID,
+        assistantMessageID: "msg_1",
+        id: "call_never_started",
+        input: { command: "SECRET_INPUT" },
+        executed: false,
+      }, 1_000),
+    )
+    const a = state.activity[SID]!
+    // real signals still recorded
+    expect(a.toolsRun).toBe(1)
+    expect(a.lastActivityKind).toBe("tool")
+    expect(a.state).toBe("executing-tools")
+    // nothing fabricated
+    expect(a.currentTool).toBeNull()
+    expect(a.currentToolSince).toBeNull()
+    expect(a.recentTools).toEqual([])
+    expect(a.filesTouched).toEqual([])
+  })
+
+  it("a pending entry for a DIFFERENT session is never resolved (sessionID guard)", () => {
+    const state = apply(
+      makeState(),
+      makeEvent("session.tool.input.started", {
+        sessionID: "ses_other",
+        id: "call_1",
+        name: "edit",
+      }, 1_000),
+      makeEvent("session.tool.called", {
+        sessionID: SID,
+        assistantMessageID: "msg_1",
+        id: "call_1",
+        input: { path: "/etc/passwd" },
+        executed: false,
+      }, 1_100),
+    )
+    const a = state.activity[SID]!
+    expect(a.currentTool).toBeNull()
+    expect(a.recentTools).toEqual([])
+    expect(a.filesTouched).toEqual([])
+    expect(a.toolsRun).toBe(1)
+  })
+
+  it("legacy shape (name directly on tool.called) still works", () => {
+    const state = apply(
+      makeState(),
+      makeEvent("session.tool.called", {
+        sessionID: SID,
+        assistantMessageID: "msg_1",
+        id: "call_1",
+        name: "bash",
+        input: { command: "ls" },
+      }, 1_000),
+    )
+    const a = state.activity[SID]!
+    expect(a.currentTool).toBe("bash")
+    expect(a.toolsRun).toBe(1)
+    expect(a.recentTools).toEqual([{ name: "bash", at: 1_000 }])
+    // no correlation was needed — none recorded
+    expect(state.pendingToolNames["call_1"]).toBeUndefined()
+  })
+
+  it("pendingToolNames caps at 256, evicting the OLDEST by timestamp", () => {
+    let state = makeState()
+    for (let i = 0; i < PENDING_TOOL_NAMES_CAP + 4; i++) {
+      state = apply(
+        state,
+        makeEvent("session.tool.input.started", {
+          sessionID: SID,
+          id: `call_${i}`,
+          name: `tool_${i}`,
+        }, 1_000 + i),
+      )
+    }
+    const pending = state.pendingToolNames
+    expect(Object.keys(pending).length).toBe(PENDING_TOOL_NAMES_CAP)
+    expect(pending["call_0"]).toBeUndefined()
+    expect(pending["call_3"]).toBeUndefined()
+    expect(pending["call_4"]).toBeDefined()
+    expect(pending[`call_${PENDING_TOOL_NAMES_CAP + 3}`]).toEqual({
+      name: `tool_${PENDING_TOOL_NAMES_CAP + 3}`,
+      sessionID: SID,
+      at: 1_000 + PENDING_TOOL_NAMES_CAP + 3,
+    })
+  })
+
+  it("session.deleted prunes that session's pending entries, keeps other sessions'", () => {
+    const state = apply(
+      makeState(),
+      makeEvent("session.tool.input.started", {
+        sessionID: SID,
+        id: "call_1",
+        name: "edit",
+      }, 1_000),
+      makeEvent("session.tool.input.started", {
+        sessionID: "ses_other",
+        id: "call_2",
+        name: "bash",
+      }, 1_010),
+      makeEvent("session.deleted", { sessionID: SID }, 1_100),
+    )
+    expect(state.pendingToolNames["call_1"]).toBeUndefined()
+    expect(state.pendingToolNames["call_2"]).toBeDefined()
+  })
+
+  it("live wire shapes on the ACTIVE session: message part keeps its name AND activity resolves", () => {
+    const seeded = makeState()
+    seeded.activeSessionId = SID
+    const state = apply(
+      seeded,
+      makeEvent("session.execution.started", { sessionID: SID }, 900),
+      makeEvent("session.step.started", {
+        sessionID: SID,
+        assistantMessageID: "msg_1",
+      }, 950),
+      makeEvent("session.tool.input.started", {
+        sessionID: SID,
+        assistantMessageID: "msg_1",
+        id: "call_1",
+        name: "shell",
+      }, 1_000),
+      makeEvent("session.tool.called", {
+        sessionID: SID,
+        assistantMessageID: "msg_1",
+        id: "call_1",
+        input: { command: "ls" },
+        executed: false,
+      }, 1_100),
+    )
+    // full message path: the part upserted from input.started kept its name
+    const msg = state.messages[SID]?.find((m) => m.id === "msg_1")
+    expect(msg?.parts.some((p) => p.type === "tool" && p.name === "shell")).toBe(true)
+    // summary path: the same correlation resolved the activity label
+    expect(state.activity[SID]!.currentTool).toBe("shell")
+    expect(state.activity[SID]!.state).toBe("executing-tools")
   })
 })

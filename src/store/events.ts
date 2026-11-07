@@ -123,6 +123,75 @@ function errorText(data: Record<string, unknown>): string | null {
   return null
 }
 
+// ---------------------------------------------------------------------------
+// tool-name correlation (live wire format, verified against opencode
+// v2.2.5 SSE captures): session.tool.input.started is the ONLY event
+// carrying the tool name — tool.called / .success / .failed carry just
+// the tool-call `id` (no name on the wire). input.started is recorded
+// here keyed by tool-call id so the later id-only events can resolve it.
+//
+// Reference-only slice (name + ids + timestamp — never input/output
+// payloads), same field-scoping rule as recentTools. Bounded by
+// PENDING_TOOL_NAMES_CAP (oldest evicted by `at`); entries are released
+// on tool success/failed and pruned when a session is removed.
+// ---------------------------------------------------------------------------
+
+/** Cap on the pendingToolNames correlation map. */
+export const PENDING_TOOL_NAMES_CAP = 256
+
+function storePendingToolName(
+  state: NexusState,
+  toolCallID: string,
+  name: string,
+  sessionID: string,
+  at: number,
+): NexusState {
+  const pending = { ...state.pendingToolNames }
+  pending[toolCallID] = { name, sessionID, at }
+  const ids = Object.keys(pending)
+  if (ids.length > PENDING_TOOL_NAMES_CAP) {
+    // evict oldest by `at` — a long run with many tool calls must not
+    // grow the map unboundedly (entries are normally released on
+    // success/failed; the cap covers events that never terminate)
+    ids.sort((a, b) => pending[a]!.at - pending[b]!.at)
+    for (const id of ids.slice(0, ids.length - PENDING_TOOL_NAMES_CAP)) {
+      delete pending[id]
+    }
+  }
+  return { ...state, pendingToolNames: pending }
+}
+
+function dropPendingToolName(
+  state: NexusState,
+  toolCallID: unknown,
+): NexusState {
+  if (typeof toolCallID !== "string" || !(toolCallID in state.pendingToolNames)) {
+    return state
+  }
+  const pending = { ...state.pendingToolNames }
+  delete pending[toolCallID]
+  return { ...state, pendingToolNames: pending }
+}
+
+/**
+ * Resolve a tool call's name for an id-only event: a literal `data.name`
+ * wins when a server sends it (legacy/defensive shape), else the
+ * pendingToolNames correlation — and the pending entry's sessionID must
+ * match the event's, else it is treated as unknown. Returns null when
+ * unresolvable: callers must NOT fabricate a name.
+ */
+function resolveToolName(
+  state: NexusState,
+  toolCallID: unknown,
+  sessionID: string,
+  dataName: unknown,
+): string | null {
+  if (typeof dataName === "string" && dataName) return dataName
+  if (typeof toolCallID !== "string") return null
+  const entry = state.pendingToolNames[toolCallID]
+  return entry && entry.sessionID === sessionID ? entry.name : null
+}
+
 /**
  * SUMMARY path — field-scoped activity updates for ALL sessions. Never
  * touches `messages`: for non-active sessions this records only labels,
@@ -150,10 +219,39 @@ function applyActivity(state: NexusState, e: NexusEvent): NexusState {
     case "session.reasoning.delta":
       // kind label only — NEVER the delta content (bleed guard)
       return updateActivity(state, sessionID, at, { lastActivityKind: "text" })
+    case "session.tool.input.started": {
+      // Summary path runs for ALL sessions (reduceEvent's handler for this
+      // same event is sameSession-guarded and feeds the message parts).
+      // Live wire: the only event carrying the tool name — record it keyed
+      // by tool-call id for the id-only events that follow.
+      // Reference-only: name + ids + timestamp, never the input payload.
+      const { id, name } = data as { id?: unknown; name?: unknown }
+      if (typeof id !== "string" || typeof name !== "string" || !name) {
+        return state
+      }
+      return storePendingToolName(state, id, name, sessionID, at)
+    }
     case "session.tool.called": {
-      const { name, input } = data as { name?: unknown; input?: unknown }
-      if (typeof name !== "string") return state
+      const { id, input } = data as { id?: unknown; input?: unknown }
+      const name = resolveToolName(
+        state,
+        id,
+        sessionID,
+        (data as { name?: unknown }).name,
+      )
       const prev = state.activity[sessionID]
+      if (name === null) {
+        // Live wire format: tool.called carries NO name (v2.2.5 capture)
+        // and no input.started correlation was seen for this id (missed
+        // event, evicted, or a different session). Do NOT fabricate: the
+        // real signals still bump (toolsRun + lastActivityKind → the busy
+        // state shows executing-tools), but currentTool stays null and NO
+        // recentTools entry is added — a ref needs a real name.
+        return updateActivity(state, sessionID, at, {
+          toolsRun: (prev?.toolsRun ?? 0) + 1,
+          lastActivityKind: "tool",
+        })
+      }
       return updateActivity(state, sessionID, at, {
         currentTool: name,
         currentToolSince: at,
@@ -169,23 +267,32 @@ function applyActivity(state: NexusState, e: NexusEvent): NexusState {
     }
     case "session.tool.success":
     case "session.tool.failed": {
-      const { name, metadata } = data as {
-        name?: unknown
+      const { id, metadata } = data as {
+        id?: unknown
         metadata?: Record<string, unknown>
       }
+      const name = resolveToolName(
+        state,
+        id,
+        sessionID,
+        (data as { name?: unknown }).name,
+      )
       const prev = state.activity[sessionID]
       const patch: Partial<SessionActivity> = {
         currentTool: null,
         currentToolSince: null,
         filesTouched: appendFilesTouched(
           prev?.filesTouched ?? [],
+          // resolved name when available; metadata path extraction is
+          // name-independent, so live metadata files land either way
           extractFilePaths(name, undefined, metadata),
         ),
       }
       if (e.type === "session.tool.failed") {
         patch.lastError = errorText(data)
       }
-      return updateActivity(state, sessionID, at, patch)
+      // the tool call is over — release its correlation entry
+      return updateActivity(dropPendingToolName(state, id), sessionID, at, patch)
     }
     case "session.execution.succeeded":
     case "session.execution.failed":
@@ -449,12 +556,18 @@ function reduceEvent(state: NexusState, e: NexusEvent): NexusState {
       delete messages[sessionID]
       const activity = { ...state.activity }
       delete activity[sessionID]
+      // release the session's pending tool-name correlations too
+      const pendingToolNames = { ...state.pendingToolNames }
+      for (const [toolCallID, entry] of Object.entries(state.pendingToolNames)) {
+        if (entry.sessionID === sessionID) delete pendingToolNames[toolCallID]
+      }
       const wasActive = state.activeSessionId === sessionID
       return {
         ...state,
         sessions,
         messages,
         activity,
+        pendingToolNames,
         sessionOrder: state.sessionOrder.filter((id) => id !== sessionID),
         ...(wasActive ? { activeSessionId: null } : {}),
       }
