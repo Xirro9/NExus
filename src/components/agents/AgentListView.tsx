@@ -3,7 +3,7 @@
 // priority badge, duration, and a per-row End button for running sessions.
 // Right-click or the kebab opens the shared session menu.
 
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useRef } from "react"
 import { ArrowDownUp, MoreVertical, Square } from "lucide-react"
 
 import {
@@ -12,10 +12,11 @@ import {
   priorityRank,
 } from "@/lib/sessionPriority"
 import type { AgentNode } from "./graph"
+import { useNow } from "./useNow"
 
 export type AgentSort = "priority" | "duration" | "activity"
 
-const STATUS_DOT: Record<AgentNode["status"], string> = {
+export const STATUS_DOT: Record<AgentNode["status"], string> = {
   running: "bg-primary",
   idle: "bg-muted-foreground/50",
   succeeded: "bg-success",
@@ -23,7 +24,7 @@ const STATUS_DOT: Record<AgentNode["status"], string> = {
   interrupted: "bg-warning",
 }
 
-function durationMs(n: AgentNode, now: number): number {
+export function durationMs(n: AgentNode, now: number): number {
   return Math.max(0, (n.updatedAt || now) - n.createdAt)
 }
 
@@ -72,9 +73,9 @@ export function AgentListView({
   ): void
   onEnd(id: string): void
 }) {
-  // re-render cadence: the parent view re-renders on every 5 s poll, so a
-  // `now` captured per mount is fresh enough for duration columns
-  const [now] = useState(() => Date.now())
+  // live tick (Phase D1 fix): the mount-captured `now` went stale between
+  // the 5 s polls — durations now tick like the tree view
+  const now = useNow(1000)
 
   const sorted = useMemo(() => {
     const list = [...nodes]
@@ -93,6 +94,13 @@ export function AgentListView({
   }, [nodes, sort, now])
 
   const allSelected = sorted.length > 0 && sorted.every((n) => selectedSet.has(n.id))
+  const someSelected = sorted.some((n) => selectedSet.has(n.id))
+
+  // indeterminate = "a visible subset is selected" — honest tri-state header
+  const allRef = useRef<HTMLInputElement>(null)
+  useEffect(() => {
+    if (allRef.current) allRef.current.indeterminate = someSelected && !allSelected
+  }, [someSelected, allSelected])
 
   const SortButton = ({ sortKey, label }: { sortKey: AgentSort; label: string }) => (
     <button
@@ -116,6 +124,7 @@ export function AgentListView({
       <div className="sticky top-0 z-10 flex items-center gap-2 border-b border-border/70 bg-background/95 px-2 py-1.5 font-mono text-[10px] tracking-wide text-muted-foreground uppercase backdrop-blur">
         <span className="w-4 shrink-0">
           <input
+            ref={allRef}
             type="checkbox"
             aria-label="Select all visible sessions"
             checked={allSelected}
@@ -141,14 +150,22 @@ export function AgentListView({
           return (
             <li
               key={n.id}
+              tabIndex={0}
+              aria-label={`${n.title}, ${n.status}`}
               onContextMenu={(e) => onOpenMenu(e, n.id)}
+              onClick={() => onSelectRow(n.id)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault()
+                  onSelectRow(n.id)
+                }
+              }}
               className={
-                "group flex cursor-pointer items-center gap-2 px-2 py-1.5 transition-colors duration-150 " +
+                "group flex cursor-pointer items-center gap-2 px-2 py-1.5 transition-colors duration-150 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-primary/50 " +
                 (selectedId === n.id
-                  ? "bg-secondary/70"
+                  ? "bg-secondary/70 ring-1 ring-inset ring-primary/25"
                   : "hover:bg-secondary/40")
               }
-              onClick={() => onSelectRow(n.id)}
             >
               <span
                 className="w-4 shrink-0"
@@ -187,7 +204,10 @@ export function AgentListView({
               </span>
               <span className="flex w-20 shrink-0 items-center gap-1.5 text-left">
                 <span
-                  className={"size-1.5 shrink-0 rounded-full " + STATUS_DOT[n.status]}
+                  className={
+                    "size-1.5 shrink-0 rounded-full " + STATUS_DOT[n.status] +
+                    (n.status === "running" ? " nexus-dot-live" : "")
+                  }
                   aria-hidden
                 />
                 <span className="truncate font-mono text-[10px]">{n.status}</span>
@@ -207,10 +227,10 @@ export function AgentListView({
                   <span className="font-mono text-[10px] text-muted-foreground/40">—</span>
                 )}
               </span>
-              <span className="hidden w-14 shrink-0 font-mono text-[10px] text-muted-foreground/70 sm:block">
+              <span className="hidden w-14 shrink-0 font-mono text-[10px] tabular-nums text-muted-foreground/70 sm:block">
                 {fmtDuration(durationMs(n, now))}
               </span>
-              <span className="w-16 shrink-0 text-right font-mono text-[10px] text-muted-foreground/70">
+              <span className="w-16 shrink-0 text-right font-mono text-[10px] tabular-nums text-muted-foreground/70">
                 {relativeUpdated(n.updatedAt, now)}
               </span>
               <span
@@ -223,7 +243,7 @@ export function AgentListView({
                     aria-label={`End session ${n.title}`}
                     title="End session (stop + drop queued prompts)"
                     onClick={() => onEnd(n.id)}
-                    className="flex size-6 items-center justify-center rounded-md border border-warning/50 text-warning transition-colors duration-150 hover:bg-warning/15"
+                    className="flex size-6 items-center justify-center rounded-md border border-warning/40 text-warning transition-colors duration-150 hover:border-warning/70 hover:bg-warning/15 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-warning/60"
                   >
                     <Square className="size-3" aria-hidden />
                   </button>
@@ -233,7 +253,7 @@ export function AgentListView({
                   aria-label={`Actions for session ${n.title}`}
                   title="Session actions"
                   onClick={(e) => onOpenMenu(e, n.id)}
-                  className="flex size-6 items-center justify-center rounded-md text-muted-foreground transition-colors duration-150 hover:bg-secondary/70 hover:text-foreground"
+                  className="flex size-6 items-center justify-center rounded-md text-muted-foreground transition-colors duration-150 hover:bg-secondary/70 hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/60"
                 >
                   <MoreVertical className="size-3.5" aria-hidden />
                 </button>

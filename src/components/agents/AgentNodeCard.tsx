@@ -8,7 +8,7 @@
 // node data (injected by AgentGraphCanvas) — the card itself stays store-free.
 
 import { Handle, Position, type NodeProps } from "@xyflow/react"
-import { MoreVertical, Square } from "lucide-react"
+import { ChevronRight, MoreVertical, Square } from "lucide-react"
 
 import {
   DEFAULT_PRIORITY,
@@ -26,6 +26,14 @@ export type AgentNodeData = AgentNode &
     ) => void
     /** one-click End Session (confirm dialog opens upstream) */
     onEnd?: (id: string) => void
+    /** collapse/expand this node's subtree (Phase D4, shared with tree view) */
+    onToggleCollapse?: (id: string) => void
+    /** the node has children in the current edge set (chevron shown) */
+    hasChildren?: boolean
+    /** subtree collapsed state (chevron rotation) */
+    collapsed?: boolean
+    /** search highlight (D4.2): hit = ringed, dim = faded, undefined = inactive */
+    searchState?: "hit" | "dim"
   }
 
 const STATUS_RING: Record<AgentNode["status"], string> = {
@@ -55,9 +63,13 @@ export function AgentNodeCard({ data, selected }: NodeProps) {
   return (
     <div
       className={
-        "group relative w-[200px] rounded-xl border bg-card px-3 py-2.5 transition-shadow " +
+        "group relative w-[200px] rounded-xl border bg-card px-3 py-2.5 transition-[opacity,box-shadow,filter] duration-200 " +
         STATUS_RING[node.status] +
-        (selected ? " ring-2 ring-ring/70" : "")
+        (selected ? " ring-2 ring-ring/70" : "") +
+        // search highlight (D4.2): hits get the cyan ring, everything else
+        // fades back (desaturated, not just transparent) so hits pop
+        (node.searchState === "hit" ? " ring-2 ring-primary/70" : "") +
+        (node.searchState === "dim" ? " opacity-30 saturate-50" : "")
       }
       onContextMenu={openMenu}
     >
@@ -66,6 +78,33 @@ export function AgentNodeCard({ data, selected }: NodeProps) {
         position={Position.Top}
         className="!size-1.5 !border-0 !bg-muted-foreground/60"
       />
+      {/* subtree collapse (Phase D4) — parents only. Sits as a circular chip
+          on the card's left edge: reads as a graph handle, not a stray glyph,
+          and stays clear of the top/bottom xyflow connection handles. */}
+      {node.hasChildren && node.onToggleCollapse && (
+        <button
+          type="button"
+          aria-label={
+            node.collapsed ? `Expand ${node.title}` : `Collapse ${node.title}`
+          }
+          aria-expanded={!node.collapsed}
+          title={node.collapsed ? "Expand subtree" : "Collapse subtree"}
+          onClick={(e) => {
+            e.stopPropagation()
+            node.onToggleCollapse?.(node.id)
+          }}
+          onPointerDown={(e) => e.stopPropagation()}
+          className="absolute -left-2.5 top-1/2 z-10 flex size-5 -translate-y-1/2 items-center justify-center rounded-full border border-border/70 bg-card text-muted-foreground shadow-sm transition-colors duration-150 hover:border-primary/50 hover:text-foreground"
+        >
+          <ChevronRight
+            className={
+              "size-3 transition-transform duration-150 " +
+              (node.collapsed ? "" : "rotate-90")
+            }
+            aria-hidden
+          />
+        </button>
+      )}
       {/* control cluster — visible on hover/focus, always for touch */}
       <div className="absolute top-1 right-1 flex items-center gap-0.5 opacity-0 transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100">
         {node.status === "running" && node.onEnd && (

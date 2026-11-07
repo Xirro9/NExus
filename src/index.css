@@ -218,6 +218,24 @@
   animation: nexus-node-glow 2s ease-in-out infinite;
 }
 
+/* tree/list row mount: a 120ms settle, not an entrance — rows appear where
+   they belong, they don't fly in. Guarded below under reduced motion. */
+@keyframes nexus-row-in {
+  from { opacity: 0; transform: translateY(-2px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.nexus-row-in {
+  animation: nexus-row-in 120ms ease-out;
+}
+/* running status dot: gentle live pulse (cyan = execution/live semantics) */
+@keyframes nexus-dot-live {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.45; }
+}
+.nexus-dot-live {
+  animation: nexus-dot-live 2s ease-in-out infinite;
+}
+
 /* ---------------------------------------------------------------------------
  * Read-only markdown body (SPEC-PHASE3 §8.2) — memory viewer + skill content
  * expander ONLY. Chat markdown stays deferred. ~40 hand-rolled rules, no

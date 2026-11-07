@@ -72,6 +72,11 @@ export interface NexusState {
   // actions
   bootstrap(): Promise<void>
   setActiveSession(id: string | null): Promise<void>
+  /** Fetch messages for ANY session WITHOUT switching the active chat (D3,
+   *  agent inspector). Cached per session — a repeat call is a no-op unless
+   *  { force: true }; the caller decides when to refetch. Same
+   *  syncGeneration race guard as setActiveSession. */
+  loadMessages(sessionID: string, opts?: { force?: boolean }): Promise<void>
   newSession(): Promise<void>
   /** Resolves true when the prompt was accepted; false on failure (409 etc.)
    *  so the composer can keep the text (§9). Deviates from the spec's
@@ -424,6 +429,20 @@ export const useNexus = create<NexusState>()((set, get) => {
         set({ messages: { ...get().messages, [id]: msgs } })
       } catch (err) {
         handleApiError("listMessages", err)
+      }
+    },
+
+    async loadMessages(sessionID, opts) {
+      const force = opts?.force === true
+      if (!force && get().messages[sessionID] !== undefined) return
+      const gen = get().syncGeneration
+      try {
+        const msgs = await api.listMessages(sessionID)
+        // a resync during the fetch invalidates this result (§4 race rule)
+        if (get().syncGeneration !== gen) return
+        set({ messages: { ...get().messages, [sessionID]: msgs } })
+      } catch (err) {
+        handleApiError("loadMessages", err)
       }
     },
 

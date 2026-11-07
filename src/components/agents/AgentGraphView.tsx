@@ -1,17 +1,24 @@
-// Agents view (SPEC-PHASE3 §2 + P0 session control): live agent/subagent
-// graph AND a practical list view, sharing one projection. The graph is a
-// pure projection — nodes/edges derive in useMemo from the stable nexus
+// Agents view (SPEC-PHASE3 §2 + P0 session control + Phase D): live
+// agent/subagent activity in THREE views sharing one projection — tree
+// (plain-DOM forest, the default), graph (lazy xyflow canvas), and a
+// practical list. The projection derives in useMemo from the stable nexus
 // sessions/busy references (NO store slice: building arrays inside a selector
 // would loop useSyncExternalStore — zustand v5 hazard). Owns the ONLY poll:
-// 5 s reconciliation while this view is visible (§2.2, single-slot budget).
+// 5 s reconciliation while this tab is visible (§2.2, single-slot budget).
 //
-// P0 controls: status/priority filters, sort, bulk selection (list), End All
-// Active, per-node context menus + End buttons, and confirm-gated destructive
+// P0 controls: status/priority filters, sort (list), shared search (filters
+// list/tree, highlights graph), bulk selection (list + tree), End All Active,
+// per-node context menus + End buttons, and confirm-gated destructive
 // actions. Priority is Jerry-side organization ONLY — OpenCode has no
 // scheduling API, so the UI labels it accordingly.
+//
+// Phase D additions: subtree collapse persisted per view-switch (shared by
+// tree + graph), delegation task text derived from loaded parent
+// conversations, and the AgentInspector replacing the old facts panel.
 
-import { Suspense, lazy, useEffect, useMemo, useState } from "react"
-import { Globe, List, Network, Radar, Square, Trash2, X } from "lucide-react"
+import { Suspense, lazy, useEffect, useMemo, useRef, useState } from "react"
+import { Globe, List, ListTree, Network, Radar, Search, Square, Trash2, X } from "lucide-react"
+import { motion, useReducedMotion } from "motion/react"
 
 import {
   SESSION_PRIORITIES,
@@ -20,15 +27,93 @@ import {
 import { useNexus } from "@/store/nexus"
 import { useWorkspace } from "@/store/workspace"
 
-import { buildGraph, layoutForest, resolveModes, type AgentNode } from "./graph"
-import { AgentDetailPanel } from "./AgentDetailPanel"
+import {
+  buildGraph,
+  layoutForest,
+  parentIdsOf,
+  resolveModes,
+  type AgentNode,
+} from "./graph"
+import { AgentInspector } from "./AgentInspector"
 import { AgentListView, type AgentSort } from "./AgentListView"
+import { AgentTreeView } from "./AgentTreeView"
 import { useSessionActions } from "./sessionActions"
+import { collectDelegations } from "./delegation"
+import {
+  descendantIds,
+  filterTreeVisible,
+  loadCollapsedSet,
+  saveCollapsedSet,
+  searchMatchIds,
+  toggleCollapsed,
+} from "./treeModel"
 
 // xyflow lives only in this lazy chunk (§12.3 bundle risk)
 const AgentGraphCanvas = lazy(() => import("./AgentGraphCanvas"))
 
-type ViewMode = "graph" | "list"
+/** Segmented Tree|Graph|List switch — same sliding-pill treatment as the
+ *  chat header's Chat|Activity toggle (Phase C), so the two toolbars read
+ *  as one system. Reduced motion collapses the pill travel. */
+const VIEW_MODES: [ViewMode, typeof ListTree, string][] = [
+  ["tree", ListTree, "Tree"],
+  ["graph", Network, "Graph"],
+  ["list", List, "List"],
+]
+
+function ViewModeSwitch({
+  viewMode,
+  onChange,
+}: {
+  viewMode: ViewMode
+  onChange(mode: ViewMode): void
+}) {
+  const reduced = useReducedMotion()
+  return (
+    <div
+      role="group"
+      aria-label="View mode"
+      className="inline-flex shrink-0 rounded-lg border border-border/80 bg-card/60 p-0.5"
+    >
+      {VIEW_MODES.map(([mode, Icon, label]) => {
+        const active = viewMode === mode
+        return (
+          <button
+            key={mode}
+            type="button"
+            aria-pressed={active}
+            aria-label={`${label} view`}
+            onClick={() => onChange(mode)}
+            className={
+              "relative rounded-md px-2 py-1 text-[11px] leading-none transition-colors duration-150 " +
+              (active
+                ? "font-medium text-secondary-foreground"
+                : "text-muted-foreground hover:text-foreground")
+            }
+          >
+            {active && (
+              <motion.span
+                layoutId="agents-view-pill"
+                aria-hidden
+                className="absolute inset-0 rounded-md bg-secondary shadow-sm shadow-black/20"
+                transition={
+                  reduced
+                    ? { duration: 0 }
+                    : { type: "spring", bounce: 0.18, duration: 0.32 }
+                }
+              />
+            )}
+            <span className="relative z-10 inline-flex items-center gap-1">
+              <Icon className="size-3.5" aria-hidden />
+              {label}
+            </span>
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
+type ViewMode = "tree" | "graph" | "list"
 type StatusFilter = "all" | AgentNode["status"]
 
 const VIEW_KEY = "nexus.agentsViewMode"
@@ -52,13 +137,18 @@ export function AgentGraphView({
   const toggleGraphScopeAll = useWorkspace((s) => s.toggleGraphScopeAll)
   const refreshActiveMap = useWorkspace((s) => s.refreshActiveMap)
 
-  const [viewMode, setViewMode] = useState<ViewMode>(() =>
-    localStorage.getItem(VIEW_KEY) === "list" ? "list" : "graph",
-  )
+  const [viewMode, setViewMode] = useState<ViewMode>(() => {
+    const raw = localStorage.getItem(VIEW_KEY)
+    return raw === "list" || raw === "graph" ? raw : "tree"
+  })
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all")
   const [priorityFilter, setPriorityFilter] = useState<"all" | SessionPriority>("all")
   const [sort, setSort] = useState<AgentSort>("activity")
   const [selectedSet, setSelectedSet] = useState<Set<string>>(() => new Set())
+  // shared search — filters list/tree (ancestor-preserving), highlights graph
+  const [search, setSearch] = useState("")
+  // subtree collapse — persisted, shared between tree rows and graph nodes
+  const [collapsed, setCollapsed] = useState<Set<string>>(loadCollapsedSet)
 
   const actions = useSessionActions({ onOpenSession })
 
@@ -102,6 +192,91 @@ export function AgentGraphView({
     [nodes, statusFilter, priorityFilter],
   )
 
+  // delegation task text (D1): derived from whatever parent conversations
+  // are already loaded — real data only, no fetching here. The messages
+  // record is rebuilt on EVERY streaming event, so the rescan is gated on a
+  // cheap per-parent message-count signature, not the record identity.
+  const messages = useNexus((s) => s.messages)
+  const messagesRef = useRef(messages)
+  messagesRef.current = messages
+  const parentIds = useMemo(
+    () => new Set(nodes.filter((n) => n.parentId !== null).map((n) => n.parentId!)),
+    [nodes],
+  )
+  const parentMsgSignature = useMemo(
+    () => [...parentIds].map((id) => messages[id]?.length ?? -1).join(","),
+    [parentIds, messages],
+  )
+  const delegations = useMemo(
+    () => {
+      // parentMsgSignature is an intentional rescan gate (see above) — the
+      // scan reads through messagesRef so streaming deltas don't re-run it
+      void parentMsgSignature
+      return collectDelegations(messagesRef.current, parentIds)
+    },
+    [parentIds, parentMsgSignature],
+  )
+  const taskText = useMemo(() => {
+    const map: Record<string, string> = {}
+    for (const [child, d] of delegations) {
+      if (d.description) map[child] = d.description
+    }
+    return map
+  }, [delegations])
+
+  const searching = search.trim() !== ""
+  const matches = useMemo(
+    () => searchMatchIds(visibleNodes, search, taskText),
+    [visibleNodes, search, taskText],
+  )
+  // tree: search keeps ancestors so the forest stays connected
+  const treeNodes = useMemo(
+    () => (searching ? filterTreeVisible(visibleNodes, (id) => matches.has(id)) : visibleNodes),
+    [searching, visibleNodes, matches],
+  )
+  // list: flat filter
+  const listNodes = useMemo(
+    () => (searching ? visibleNodes.filter((n) => matches.has(n.id)) : visibleNodes),
+    [searching, visibleNodes, matches],
+  )
+  // graph: search HIGHLIGHTS (D4.2) instead of filtering — structure stays
+  const graphHighlight = searching ? matches : null
+
+  // subtree collapse (D4.1): hidden descendants + relayout on visible nodes
+  // only (layoutForest accepts arbitrary node sets — orphans promote to roots)
+  const collapsedHidden = useMemo(() => {
+    if (collapsed.size === 0) return null
+    const hidden = new Set<string>()
+    for (const id of collapsed) {
+      for (const d of descendantIds(nodes, id)) hidden.add(d)
+    }
+    return hidden
+  }, [collapsed, nodes])
+  const graphNodes = useMemo(
+    () =>
+      collapsedHidden
+        ? visibleNodes.filter((n) => !collapsedHidden.has(n.id))
+        : visibleNodes,
+    [visibleNodes, collapsedHidden],
+  )
+  const graphEdges = useMemo(
+    () =>
+      edges.filter(
+        (e) =>
+          graphNodes.some((n) => n.id === e.source) &&
+          graphNodes.some((n) => n.id === e.target),
+      ),
+    [edges, graphNodes],
+  )
+  const graphPositions = useMemo(
+    () => (collapsedHidden ? layoutForest(graphNodes, graphEdges) : positions),
+    [collapsedHidden, graphNodes, graphEdges, positions],
+  )
+  // hasChildren for the graph chevrons derives from the UNFILTERED edges —
+  // collapsed subtrees lose their edges in graphEdges, and a chevron derived
+  // from those could never re-expand (one-way trap, designer fix 1)
+  const graphHasChildIds = useMemo(() => parentIdsOf(edges), [edges])
+
   const runningIds = useMemo(
     () => nodes.filter((n) => n.status === "running").map((n) => n.id),
     [nodes],
@@ -110,6 +285,18 @@ export function AgentGraphView({
   const setView = (v: ViewMode) => {
     setViewMode(v)
     localStorage.setItem(VIEW_KEY, v)
+  }
+
+  const toggleCollapse = (id: string) => {
+    setCollapsed((prev) => {
+      const next = toggleCollapsed(prev, id)
+      saveCollapsedSet(next)
+      return next
+    })
+  }
+
+  const setSelectedIds = (ids: string[]) => {
+    setSelectedSet(new Set(ids))
   }
 
   const toggleSelected = (id: string) => {
@@ -218,7 +405,20 @@ export function AgentGraphView({
         )}
 
         <div className="ml-auto flex items-center gap-2">
-          {viewMode === "list" && visibleNodes.length > 0 && (
+          <label
+            className="flex h-7 items-center gap-1.5 rounded-lg border border-border bg-input/60 px-2"
+            title="Search by title, agent type, or delegation task"
+          >
+            <Search className="size-3 shrink-0 text-muted-foreground" aria-hidden />
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search sessions…"
+              aria-label="Search sessions by title, agent, or task"
+              className="w-32 bg-transparent font-mono text-[11px] text-foreground placeholder:text-muted-foreground/50 focus:outline-none sm:w-36"
+            />
+          </label>
+          {viewMode !== "graph" && visibleNodes.length > 0 && (
             <button
               type="button"
               onClick={selectIdle}
@@ -247,39 +447,12 @@ export function AgentGraphView({
             <Square className="size-3" aria-hidden />
             End all active ({runningIds.length})
           </button>
-          <div
-            className="flex overflow-hidden rounded-lg border border-border"
-            role="group"
-            aria-label="View mode"
-          >
-            {(
-              [
-                ["graph", Network],
-                ["list", List],
-              ] as const
-            ).map(([mode, Icon]) => (
-              <button
-                key={mode}
-                type="button"
-                onClick={() => setView(mode)}
-                aria-pressed={viewMode === mode}
-                className={
-                  "flex h-7 items-center gap-1 px-2 text-[11px] transition-colors " +
-                  (viewMode === mode
-                    ? "bg-primary/15 text-primary"
-                    : "text-muted-foreground hover:text-foreground")
-                }
-              >
-                <Icon className="size-3.5" aria-hidden />
-                {mode}
-              </button>
-            ))}
-          </div>
+          <ViewModeSwitch viewMode={viewMode} onChange={setView} />
         </div>
       </div>
 
-      {/* bulk bar (list selection) */}
-      {viewMode === "list" && selectedSet.size > 0 && (
+      {/* bulk bar (list + tree selection) */}
+      {selectedSet.size > 0 && (
         <div className="mx-5 mb-1 flex shrink-0 items-center gap-2 rounded-lg border border-primary/40 bg-primary/5 px-3 py-1.5">
           <span className="font-mono text-[11px] text-primary">
             {selectedSet.size} selected
@@ -323,12 +496,12 @@ export function AgentGraphView({
         </p>
       )}
 
-      <div className="flex min-h-0 flex-1">
+      <div className="relative flex min-h-0 flex-1">
         <div className="relative min-h-0 min-w-0 flex-1">
           <Suspense fallback={<GraphFallback label="Loading graph…" />}>
             {viewMode === "list" ? (
               <AgentListView
-                nodes={visibleNodes}
+                nodes={listNodes}
                 selectedId={selectedGraphNode}
                 selectedSet={selectedSet}
                 sort={sort}
@@ -339,33 +512,60 @@ export function AgentGraphView({
                 onOpenMenu={(e, id) => actions.openMenu(e, id)}
                 onEnd={(id) => actions.requestStop([id], "terminate")}
               />
-            ) : visibleNodes.length === 0 ? (
-              <GraphEmpty scoped={!graphScopeAll} filtered={statusFilter !== "all" || priorityFilter !== "all"} />
+            ) : viewMode === "tree" ? (
+              treeNodes.length === 0 ? (
+                <GraphEmpty
+                  scoped={!graphScopeAll}
+                  filtered={statusFilter !== "all" || priorityFilter !== "all" || searching}
+                />
+              ) : (
+                <AgentTreeView
+                  nodes={treeNodes}
+                  visibleIds={searching ? matches : null}
+                  taskText={taskText}
+                  collapsed={collapsed}
+                  onToggleCollapsed={toggleCollapse}
+                  selectedId={selectedGraphNode}
+                  selectedSet={selectedSet}
+                  onSelectRow={(id) => useWorkspace.setState({ selectedGraphNode: id })}
+                  onToggleSelected={toggleSelected}
+                  onSetSelected={setSelectedIds}
+                  onOpenMenu={(e, id) => actions.openMenu(e, id)}
+                  onEnd={(id) => actions.requestStop([id], "terminate")}
+                />
+              )
+            ) : graphNodes.length === 0 ? (
+              <GraphEmpty
+                scoped={!graphScopeAll}
+                filtered={statusFilter !== "all" || priorityFilter !== "all"}
+              />
             ) : (
               <AgentGraphCanvas
-                nodes={visibleNodes}
-                edges={edges.filter(
-                  (e) =>
-                    visibleNodes.some((n) => n.id === e.source) &&
-                    visibleNodes.some((n) => n.id === e.target),
-                )}
-                positions={positions}
+                nodes={graphNodes}
+                edges={graphEdges}
+                hasChildIds={graphHasChildIds}
+                positions={graphPositions}
+                highlightIds={graphHighlight}
+                collapsedIds={collapsed}
                 callbacks={{
                   onContextMenu: (e, id) => actions.openMenu(e, id),
                   onEnd: (id) => actions.requestStop([id], "terminate"),
+                  onToggleCollapse: toggleCollapse,
                 }}
               />
             )}
           </Suspense>
         </div>
         {selected && (
-          <AgentDetailPanel
+          <AgentInspector
             node={selected}
             projectPath={selectedProject}
             onOpenInChat={onOpenSession}
             onEnd={(id) => actions.requestStop([id], "terminate")}
             onDelete={(id) => actions.requestDelete([id])}
             onCopy={(id) => actions.copySessionId(id)}
+            onSelectNode={(id) => useWorkspace.setState({ selectedGraphNode: id })}
+            onClose={() => useWorkspace.setState({ selectedGraphNode: null })}
           />
         )}
       </div>

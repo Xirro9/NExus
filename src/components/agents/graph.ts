@@ -124,6 +124,19 @@ export function buildGraph(
 }
 
 /**
+ * Parent ids present in an edge list. Call with the UNFILTERED edge list
+ * (the full graph): the collapse chevron derives `hasChildren` from this,
+ * so a node whose subtree is collapsed keeps its expand affordance —
+ * filtered/collapsed edges lose the child link and would trap the subtree
+ * closed (Phase D reviewer fix).
+ */
+export function parentIdsOf(edges: AgentEdge[]): Set<string> {
+  const ids = new Set<string>()
+  for (const e of edges) ids.add(e.source)
+  return ids
+}
+
+/**
  * Deterministic tidy forest (§2.3, no dagre):
  * 1. roots ordered by createdAt desc, laid out left→right at x = i × 300
  * 2. leaves of each tree stack vertically (y = running cursor × 130)

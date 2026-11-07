@@ -34,6 +34,11 @@ import type {
   WorktreeDirectory,
 } from "./types"
 
+/** Server-side cap on GET /api/session/:id/message results — a list at this
+ *  length is TRUNCATED, so UI counts must render it as a floor ("200+"),
+ *  never as a total. */
+export const MESSAGE_LIST_CAP = 200
+
 export class ApiError extends Error {
   status: number
   tag: string | null
@@ -207,7 +212,7 @@ export const api = {
   },
 
   listMessages(sessionID: string): Promise<ChatMessage[]> {
-    const q = new URLSearchParams({ order: "asc", limit: "200" })
+    const q = new URLSearchParams({ order: "asc", limit: String(MESSAGE_LIST_CAP) })
     return request<Record<string, unknown>[]>(
       `/api/session/${sessionID}/message?${q.toString()}`,
     ).then((items) =>

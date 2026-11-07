@@ -40,18 +40,30 @@ function statusColor(status: AgentNode["status"]): string {
 export interface CanvasCallbacks {
   onContextMenu(e: { clientX: number; clientY: number; preventDefault(): void }, id: string): void
   onEnd(id: string): void
+  /** collapse/expand a node's subtree (Phase D4 — shared with the tree view) */
+  onToggleCollapse(id: string): void
 }
 
 export default function AgentGraphCanvas({
   nodes: agentNodes,
   edges: agentEdges,
+  hasChildIds,
   positions,
   callbacks,
+  highlightIds,
+  collapsedIds,
 }: {
   nodes: AgentNode[]
   edges: AgentEdge[]
+  /** parents in the UNFILTERED edge list — collapsed nodes keep their
+   *  expand chevron even though their child edges are filtered out */
+  hasChildIds: Set<string>
   positions: Map<string, { x: number; y: number }>
   callbacks: CanvasCallbacks
+  /** active search matches — null when no search (D4.2 highlight, not filter) */
+  highlightIds: Set<string> | null
+  /** nodes whose subtree is collapsed (chevron state on the card) */
+  collapsedIds: Set<string>
 }) {
   // keep the latest callbacks without invalidating the nodes memo
   const cbRef = useRef<CanvasCallbacks>(callbacks)
@@ -72,10 +84,20 @@ export default function AgentGraphCanvas({
           onContextMenu: (e: Parameters<CanvasCallbacks["onContextMenu"]>[0], id: string) =>
             cbRef.current.onContextMenu(e, id),
           onEnd: (id: string) => cbRef.current.onEnd(id),
+          onToggleCollapse: (id: string) => cbRef.current.onToggleCollapse(id),
+          hasChildren: hasChildIds.has(n.id),
+          collapsed: collapsedIds.has(n.id),
+          // highlight semantics: null set = search inactive (no dimming)
+          searchState:
+            highlightIds === null
+              ? undefined
+              : highlightIds.has(n.id)
+                ? ("hit" as const)
+                : ("dim" as const),
         },
         selected: false,
       })),
-    [agentNodes, positions],
+    [agentNodes, positions, hasChildIds, collapsedIds, highlightIds],
   )
   const runningIds = useMemo(
     () => new Set(agentNodes.filter((n) => n.status === "running").map((n) => n.id)),
