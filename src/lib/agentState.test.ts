@@ -10,8 +10,10 @@ import type { NexusEvent } from "@/lib/opencode/sse"
 import type { SessionInfo } from "@/lib/opencode/types"
 import {
   appendFilesTouched,
+  appendRecentTools,
   deriveAgentState,
   FILES_TOUCHED_CAP,
+  RECENT_TOOLS_CAP,
   type AgentStateInput,
 } from "./agentState"
 
@@ -157,6 +159,35 @@ describe("appendFilesTouched", () => {
     expect(files.length).toBe(FILES_TOUCHED_CAP)
     expect(files[0]).toBe(`/f${30 - FILES_TOUCHED_CAP}`)
     expect(files[files.length - 1]).toBe("/f29")
+  })
+})
+
+// ---------------------------------------------------------------------------
+// appendRecentTools — order + cap
+
+describe("appendRecentTools", () => {
+  it("appends by reference, most recent last", () => {
+    expect(appendRecentTools([], "bash", 1_000)).toEqual([
+      { name: "bash", at: 1_000 },
+    ])
+    expect(appendRecentTools([{ name: "bash", at: 1_000 }], "edit", 1_100))
+      .toEqual([
+        { name: "bash", at: 1_000 },
+        { name: "edit", at: 1_100 },
+      ])
+  })
+
+  it("caps at RECENT_TOOLS_CAP keeping the most recent", () => {
+    let tools: ReturnType<typeof appendRecentTools> = []
+    for (let i = 0; i < RECENT_TOOLS_CAP + 10; i++) {
+      tools = appendRecentTools(tools, `tool_${i}`, i)
+    }
+    expect(tools.length).toBe(RECENT_TOOLS_CAP)
+    expect(tools[0]).toEqual({ name: "tool_10", at: 10 })
+    expect(tools[tools.length - 1]).toEqual({
+      name: `tool_${RECENT_TOOLS_CAP + 9}`,
+      at: RECENT_TOOLS_CAP + 9,
+    })
   })
 })
 
@@ -354,6 +385,83 @@ describe("activity summary path", () => {
     expect(files.length).toBe(20)
     expect(files[0]).toBe("/f5")
     expect(files[files.length - 1]).toBe("/f24")
+  })
+
+  it("recentTools accumulates on a NON-active session (summary path, refs only)", () => {
+    const state = apply(
+      makeState(),
+      makeEvent("session.tool.called", {
+        sessionID: SID,
+        assistantMessageID: "msg_1",
+        id: "tool_1",
+        name: "edit",
+        input: { path: "/src/a.ts", SECRET_TOOL_INPUT: "do not store" },
+      }, 1_000),
+      makeEvent("session.tool.success", {
+        sessionID: SID,
+        assistantMessageID: "msg_1",
+        id: "tool_1",
+        content: [{ type: "text", text: "SECRET_TOOL_OUTPUT" }],
+      }, 1_100),
+      makeEvent("session.tool.called", {
+        sessionID: SID,
+        assistantMessageID: "msg_1",
+        id: "tool_2",
+        name: "bash",
+        input: {},
+      }, 1_200),
+    )
+    const a = state.activity[SID]!
+    expect(a.recentTools).toEqual([
+      { name: "edit", at: 1_000 },
+      { name: "bash", at: 1_200 },
+    ])
+    // field-scoped guarantee: references ONLY — no tool input/output text
+    const refs = JSON.stringify(a.recentTools)
+    expect(refs).not.toContain("SECRET")
+    expect(refs).not.toContain("/src/a.ts")
+    // and the bleed guard still holds: no message path ran
+    expect(state.messages[SID]).toBeUndefined()
+  })
+
+  it("recentTools caps at 25 keeping the most recent", () => {
+    let state = makeState()
+    for (let i = 0; i < 30; i++) {
+      state = apply(
+        state,
+        makeEvent("session.tool.called", {
+          sessionID: SID,
+          assistantMessageID: "msg_1",
+          id: `tool_${i}`,
+          name: `tool_${i}`,
+          input: {},
+        }, 1_000 + i),
+      )
+    }
+    const tools = state.activity[SID]!.recentTools
+    expect(tools.length).toBe(RECENT_TOOLS_CAP)
+    expect(tools[0]).toEqual({ name: "tool_5", at: 1_005 })
+    expect(tools[tools.length - 1]).toEqual({ name: "tool_29", at: 1_029 })
+  })
+
+  it("execution.started resets run-scoped counters but keeps the session-wide recentTools", () => {
+    const state = apply(
+      makeState(),
+      makeEvent("session.tool.called", {
+        sessionID: SID,
+        assistantMessageID: "msg_1",
+        id: "tool_1",
+        name: "bash",
+        input: {},
+      }, 1_000),
+      makeEvent("session.execution.started", { sessionID: SID }, 2_000),
+    )
+    const a = state.activity[SID]!
+    // run-scoped: reset
+    expect(a.toolsRun).toBe(0)
+    expect(a.currentTool).toBeNull()
+    // session-wide recency (like filesTouched): kept
+    expect(a.recentTools).toEqual([{ name: "bash", at: 1_000 }])
   })
 
   it("subagent calls touch no files", () => {

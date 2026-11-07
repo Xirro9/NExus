@@ -7,7 +7,7 @@
 import { useEffect, useState } from "react"
 import { RotateCw } from "lucide-react"
 
-import { renderMarkdown } from "@/lib/markdown"
+import { renderMarkdown, useHighlighterReady } from "@/lib/markdown"
 import { MEMORY_FILES, useWorkspace } from "@/store/workspace"
 
 function fmtClock(t: number): string {
@@ -28,6 +28,8 @@ const STATUS_DOT: Record<
 export function MemoryViewer() {
   const memory = useWorkspace((s) => s.memory)
   const loadMemoryFile = useWorkspace((s) => s.loadMemoryFile)
+  // sugar-high loads lazily; re-render once it arrives so fences highlight
+  useHighlighterReady()
   const [selected, setSelected] = useState(MEMORY_FILES[0]!.id)
 
   // load the selected file on first open / switch (if never fetched)

@@ -12,9 +12,17 @@
 // via `codeCopy`, a copy button. The button is INERT markup (data-md-copy,
 // no inline handlers — CSP-safe); the click is handled by React delegation
 // in the chat's TextBody. System viewers keep the default (no button).
+//
+// sugar-high loads LAZILY (dynamic import — keeps ~11.6 kB gz out of the
+// initial chunk). renderMarkdown stays SYNC: until the chunk arrives (or if
+// it ever fails to load) JS/TS fences render as escaped plain blocks, then
+// upgrade once ready. Components subscribe with useHighlighterReady() to
+// re-render on arrival; imperative callers can await ensureHighlighter().
+// Dynamic import is CSP-safe: a static chunk URL from the app origin — no
+// eval, no inline script.
 
 import MarkdownIt from "markdown-it"
-import { highlight } from "sugar-high"
+import { useSyncExternalStore } from "react"
 
 const md = new MarkdownIt({
   html: false,
@@ -47,6 +55,52 @@ const SUGAR_HIGH_LANGS = new Set([
   "mtsx",
 ])
 
+// --- lazy highlighter (sugar-high via dynamic import) ----------------------
+
+type HighlightFn = (src: string) => string
+
+let highlightFn: HighlightFn | null = null
+let highlightPromise: Promise<void> | null = null
+const highlightListeners = new Set<() => void>()
+
+/** Load the lazy highlighter once (memoized). Resolves even when the chunk
+ *  fails — fences then keep the plain escaped-block fallback. */
+export function ensureHighlighter(): Promise<void> {
+  highlightPromise ??= import("sugar-high")
+    .then((m) => {
+      highlightFn = m.highlight
+      for (const fn of highlightListeners) fn()
+    })
+    .catch(() => {
+      // chunk load failure → stay on the plain-block fallback (already rendered)
+    })
+  return highlightPromise
+}
+
+// Prefetch: the chunk loads as soon as this module does (chat and both
+// System viewers import it), keeping the initial bundle clean without any
+// caller-side wiring.
+void ensureHighlighter()
+
+function isHighlighterReady(): boolean {
+  return highlightFn !== null
+}
+
+function subscribeHighlighter(fn: () => void): () => void {
+  highlightListeners.add(fn)
+  return () => {
+    highlightListeners.delete(fn)
+  }
+}
+
+/** Re-render the calling component once the lazy highlighter arrives, so
+ *  already-rendered fences upgrade from plain blocks to token spans. A no-op
+ *  (and cheap) when the highlighter is already loaded. Pair with
+ *  renderMarkdown — it picks up readiness internally. */
+export function useHighlighterReady(): void {
+  useSyncExternalStore(subscribeHighlighter, isHighlighterReady)
+}
+
 // Full replacement (never falls back to the default fence renderer — every
 // fenced block goes through the .md-code wrapper).
 md.renderer.rules.fence = (tokens, idx, _options, env, _self) => {
@@ -54,9 +108,9 @@ md.renderer.rules.fence = (tokens, idx, _options, env, _self) => {
   const lang = (token.info ?? "").trim().split(/\s+/)[0]?.toLowerCase() ?? ""
   const escape = md.utils.escapeHtml
   let body: string
-  if (SUGAR_HIGH_LANGS.has(lang)) {
+  if (SUGAR_HIGH_LANGS.has(lang) && highlightFn) {
     // empty source (or an empty highlight result) → plain escaped block
-    body = highlight(token.content) || escape(token.content)
+    body = highlightFn(token.content) || escape(token.content)
   } else {
     body = escape(token.content)
   }

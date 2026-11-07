@@ -4,7 +4,7 @@
 // stays literal whitespace-pre-wrap, tool parts stay ToolPartCard.
 
 import { resolveCopyTarget } from "@/lib/codeCopy"
-import { renderMarkdown } from "@/lib/markdown"
+import { renderMarkdown, useHighlighterReady } from "@/lib/markdown"
 import type { ChatMessage, MessagePart, TextPart } from "@/lib/opencode/types"
 import { ReasoningBlock } from "./ReasoningBlock"
 import { ToolPartCard } from "./ToolPartCard"
@@ -74,6 +74,9 @@ export function TextBody({
   cursor: boolean
   streaming: boolean
 }) {
+  // sugar-high loads lazily; this re-renders once it arrives so fences
+  // upgrade from plain blocks to highlighted spans (render stays sync)
+  useHighlighterReady()
   return (
     <div
       className={`md-body md-chat${cursor ? " nexus-cursor" : ""}`}

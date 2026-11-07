@@ -14,6 +14,14 @@ export type AgentRunState =
   | "failed"
   | "interrupted"
 
+/** One recent tool call, by reference: the tool NAME and the event
+ *  timestamp ONLY. Never tool input/output text — recentTools must stay
+ *  field-scoped like the rest of SessionActivity (bleed guard). */
+export interface ToolCallRef {
+  name: string
+  at: number
+}
+
 /** Per-session activity summary maintained by the event reducer's SUMMARY
  *  path (runs for ALL sessions — see events.ts). Field-scoped: it never
  *  accumulates message text or deltas, so the cross-session bleed guard
@@ -29,6 +37,11 @@ export interface SessionActivity {
   toolsRun: number
   /** files observed in real tool inputs/metadata, most recent last, capped */
   filesTouched: string[]
+  /** recent tool calls by reference (name + timestamp, most recent last,
+   *  capped). Session-wide recency like filesTouched — NOT reset on
+   *  execution.started (only run-scoped counters reset), so a session's
+   *  recent tools stay visible without loading its messages. */
+  recentTools: ToolCallRef[]
   /** error text from a failed tool / failed execution, when the event carries one */
   lastError: string | null
   /** kind of the most recent activity event (drives busy-state refinement) */
@@ -69,6 +82,9 @@ export function deriveAgentState(input: AgentStateInput): AgentRunState {
 /** Cap on the per-session filesTouched list (most recent entries kept). */
 export const FILES_TOUCHED_CAP = 20
 
+/** Cap on the per-session recentTools list (most recent entries kept). */
+export const RECENT_TOOLS_CAP = 25
+
 /** Append file paths (deduped, most recent last) under the cap. Pure. */
 export function appendFilesTouched(
   existing: string[],
@@ -77,4 +93,14 @@ export function appendFilesTouched(
   if (added.length === 0) return existing
   const merged = [...existing, ...added.filter((f) => !existing.includes(f))]
   return merged.slice(-FILES_TOUCHED_CAP)
+}
+
+/** Append a tool-call ref (most recent last) under the cap. Pure. */
+export function appendRecentTools(
+  existing: ToolCallRef[],
+  name: string,
+  at: number,
+): ToolCallRef[] {
+  const next = [...existing, { name, at }]
+  return next.length > RECENT_TOOLS_CAP ? next.slice(-RECENT_TOOLS_CAP) : next
 }

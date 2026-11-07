@@ -73,6 +73,8 @@ export function usePermissionRequests(): PermissionRequest[] {
 
 const EMPTY_FILES: string[] = []
 
+const EMPTY_RECENT_TOOLS: SessionActivity["recentTools"] = []
+
 const EMPTY_ACTIVITY: SessionActivity = {
   state: "idle",
   lastEventAt: 0,
@@ -80,6 +82,7 @@ const EMPTY_ACTIVITY: SessionActivity = {
   currentToolSince: null,
   toolsRun: 0,
   filesTouched: EMPTY_FILES,
+  recentTools: EMPTY_RECENT_TOOLS,
   lastError: null,
   lastActivityKind: null,
 }
@@ -90,5 +93,17 @@ const EMPTY_ACTIVITY: SessionActivity = {
 export function useSessionActivity(sessionID: string | null): SessionActivity {
   return useNexus((s) =>
     sessionID ? (s.activity[sessionID] ?? EMPTY_ACTIVITY) : EMPTY_ACTIVITY,
+  )
+}
+
+/** Recent tool calls (name + timestamp refs) for one session, scoped so a
+ *  streaming session only re-renders the components that show them. */
+export function useSessionRecentTools(
+  sessionID: string | null,
+): SessionActivity["recentTools"] {
+  return useNexus((s) =>
+    sessionID
+      ? (s.activity[sessionID]?.recentTools ?? EMPTY_RECENT_TOOLS)
+      : EMPTY_RECENT_TOOLS,
   )
 }

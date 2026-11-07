@@ -5,13 +5,15 @@
 
 import { useState } from "react"
 
-import { renderMarkdown } from "@/lib/markdown"
+import { renderMarkdown, useHighlighterReady } from "@/lib/markdown"
 import type { SkillInfo } from "@/lib/opencode/types"
 
 import { SkeletonRows } from "./SkeletonRows"
 
 function SkillRow({ skill }: { skill: SkillInfo }) {
   const [open, setOpen] = useState(false)
+  // sugar-high loads lazily; re-render once it arrives so fences highlight
+  useHighlighterReady()
   return (
     <li className="rounded-xl border border-border/70 bg-card">
       <button

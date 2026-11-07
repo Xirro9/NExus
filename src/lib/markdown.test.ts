@@ -1,17 +1,31 @@
 // Markdown fence behavior (C1): sugar-high on JS/TS, graceful plain-block
 // fallback for other languages, copy button only when the caller opts in,
 // security posture unchanged (raw HTML escaped).
+//
+// sugar-high loads lazily (dynamic import — see markdown.ts). The JS/TS
+// highlight test awaits ensureHighlighter() first; the transient pre-load
+// plain-block path for JS/TS is the same else-branch the python test below
+// exercises, so no timing-dependent "before load" assertion is needed.
 
 import { describe, expect, it } from "vitest"
 
-import { renderMarkdown } from "./markdown"
+import { ensureHighlighter, renderMarkdown } from "./markdown"
 
 describe("renderMarkdown fences", () => {
-  it("highlights TS/JS fences through sugar-high (token spans present)", () => {
+  it("highlights TS/JS fences through sugar-high once the lazy chunk loads", async () => {
+    await ensureHighlighter()
     const html = renderMarkdown("```ts\nconst x: number = 1\n```")
     expect(html).toContain("md-code")
     expect(html).toContain("sh__token--keyword")
     expect(html).toContain('data-md-lang="ts"')
+  })
+
+  it("ensureHighlighter is memoized (repeat calls stay resolved)", async () => {
+    const first = ensureHighlighter()
+    const second = ensureHighlighter()
+    await Promise.all([first, second])
+    // still highlights after repeated calls
+    expect(renderMarkdown("```js\nhi()\n```")).toContain("sh__token")
   })
 
   it("falls back to a plain escaped block for non-JS/TS languages", () => {

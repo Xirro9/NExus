@@ -4,16 +4,18 @@
 // and arrives via SSE (no poll of its own; Refresh mirrors the Agents-tab
 // reconciliation: resync + reconcileSessions + the server-truth active map).
 //
-// Real data only: the tool section shows the CURRENT tool + per-session run
-// counts because the store retains no per-tool history (noted in-section);
-// inbox counts exist only for sessions whose inbox has been polled (noted).
+// Real data only: tool rows show the CURRENT tool + per-session run counts;
+// the store keeps per-session recent tool NAMES (refs only — never
+// input/output), surfaced as the expandable strip on active rows. Inbox
+// counts exist only for sessions whose inbox has been polled (noted).
 // Approvals never gain reply buttons here — PermissionCard is the single
 // reply call-site (reviewer gate §12.1); rows navigate to the session.
 
-import { useMemo, useState, type ReactNode } from "react"
+import { useId, useMemo, useState, type ReactNode } from "react"
 import {
   Activity,
   CheckCircle2,
+  ChevronDown,
   CircleAlert,
   CircleDashed,
   Gauge,
@@ -26,11 +28,12 @@ import {
 
 import { useNexus } from "@/store/nexus"
 import { useWorkspace } from "@/store/workspace"
-import { usePermissionRequests } from "@/store/selectors"
+import { usePermissionRequests, useSessionRecentTools } from "@/store/selectors"
 import { PanelCard } from "@/components/dashboard/PanelCard"
 import { useNow } from "@/components/agents/useNow"
 import { fmtDuration } from "@/components/agents/AgentListView"
 
+import type { ToolCallRef } from "@/lib/agentState"
 import {
   ACTIVITY_STATE_DOT,
   buildActivitySnapshot,
@@ -84,12 +87,17 @@ function SessionRow({
   now,
   onOpen,
   trailing,
+  detail,
 }: {
   row: ActivityRow
   now: number
   onOpen(id: string): void
   /** section-specific middle content (tool name, error text, queue count…) */
   trailing?: ReactNode
+  /** optional expandable region rendered under the row INSIDE the li but
+   *  OUTSIDE the navigational button — an expand toggle must never nest
+   *  inside a button (invalid HTML, breaks activation semantics) */
+  detail?: ReactNode
 }) {
   return (
     <li className="nexus-row-in">
@@ -122,7 +130,73 @@ function SessionRow({
             : fmtRelative(row.updatedAt, now)}
         </span>
       </button>
+      {detail != null && detail}
     </li>
+  )
+}
+
+/** How many calls the expanded strip shows. The store keeps up to 25 refs
+ *  per session; the strip stays a glanceable few — the full list is
+ *  inspector territory. */
+const RECENT_TOOLS_SHOWN = 5
+
+/** Expandable recency strip under an active row: collapsed it is one toggle
+ *  line, expanded it lists the last few tool calls most-recent-first — by
+ *  reference only (name + event time; the store never keeps input/output).
+ *  The chevron rotation is the one CSS transition here, clamped under
+ *  prefers-reduced-motion by the global rule in index.css. */
+function RecentToolsStrip({
+  tools,
+  now,
+}: {
+  tools: ToolCallRef[]
+  now: number
+}) {
+  const [open, setOpen] = useState(false)
+  const listId = useId()
+  // the store keeps entries most-recent-LAST — display most-recent-FIRST
+  const shown = useMemo(() => {
+    const out: ToolCallRef[] = []
+    for (let i = tools.length - 1; i >= 0 && out.length < RECENT_TOOLS_SHOWN; i--) {
+      out.push(tools[i]!)
+    }
+    return out
+  }, [tools])
+
+  return (
+    <div className="px-2 pb-1.5">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+        aria-controls={listId}
+        className="inline-flex items-center gap-1 rounded font-mono text-[10px] text-muted-foreground/80 transition-colors duration-150 hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/50"
+      >
+        <ChevronDown
+          className={
+            "size-3 transition-transform duration-150" +
+            (open ? " rotate-180" : "")
+          }
+          aria-hidden
+        />
+        {tools.length} recent tool{tools.length === 1 ? "" : "s"}
+      </button>
+      {open && (
+        <ul id={listId} className="mt-1 space-y-0.5 border-l border-border/60 pl-4">
+          {shown.map((t, i) => (
+            <li
+              key={`${t.at}-${t.name}-${i}`}
+              className="flex items-center justify-between gap-2 font-mono text-[10px]"
+            >
+              <span className="min-w-0 truncate text-foreground/90">{t.name}</span>
+              <span className="shrink-0 tabular-nums text-muted-foreground/70">
+                {fmtRelative(t.at, now)}
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
   )
 }
 
@@ -152,6 +226,36 @@ function CountChip({ n, tone }: { n: number; tone?: "live" | "warn" | "error" })
 // ---------------------------------------------------------------------------
 // sections
 
+/** One Active-panel row plus its recency strip. The recentTools hook lives
+ *  HERE, not in shared SessionRow, so only active rows subscribe — a tool
+ *  event updates one row's strip without touching the others (the view root
+ *  still re-renders on the activity slice, as before — the hook narrows the
+ *  subscription, not the tree's existing activity dependency). */
+function ActiveRow({
+  row,
+  now,
+  onOpen,
+}: {
+  row: ActivityRow
+  now: number
+  onOpen(id: string): void
+}) {
+  const recentTools = useSessionRecentTools(row.id)
+  return (
+    <SessionRow
+      row={row}
+      now={now}
+      onOpen={onOpen}
+      trailing={row.currentTool ? `▸ ${row.currentTool}` : null}
+      detail={
+        recentTools.length > 0 ? (
+          <RecentToolsStrip tools={recentTools} now={now} />
+        ) : null
+      }
+    />
+  )
+}
+
 function ActivePanel({
   rows,
   now,
@@ -172,13 +276,7 @@ function ActivePanel({
       ) : (
         <ul className="divide-y divide-border/40">
           {rows.map((r) => (
-            <SessionRow
-              key={r.id}
-              row={r}
-              now={now}
-              onOpen={onOpen}
-              trailing={r.currentTool ? `▸ ${r.currentTool}` : null}
-            />
+            <ActiveRow key={r.id} row={r} now={now} onOpen={onOpen} />
           ))}
         </ul>
       )}
@@ -376,8 +474,8 @@ function ToolsPanel({
             ))}
           </ul>
           <p className="px-2 pt-2 text-[10px] text-muted-foreground/60">
-            Per-session counts + the live tool only — per-tool history is not
-            retained.
+            Counts are run-scoped; recent tool NAMES are kept session-wide
+            (refs only, never input/output) — see the strip on active rows.
           </p>
         </>
       )}

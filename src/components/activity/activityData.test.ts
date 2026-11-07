@@ -37,6 +37,7 @@ function act(over: Partial<SessionActivity>): SessionActivity {
     currentToolSince: null,
     toolsRun: 0,
     filesTouched: [],
+    recentTools: [],
     lastError: null,
     lastActivityKind: null,
     ...over,

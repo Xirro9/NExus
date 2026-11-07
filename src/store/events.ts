@@ -11,7 +11,12 @@
 //      It touches only the `activity` slice — never messages — so the
 //      bleed guard keeps holding.
 
-import { appendFilesTouched, deriveAgentState, type SessionActivity } from "@/lib/agentState"
+import {
+  appendFilesTouched,
+  appendRecentTools,
+  deriveAgentState,
+  type SessionActivity,
+} from "@/lib/agentState"
 import { extractFilePaths } from "@/lib/toolDisplay"
 import type { NexusEvent } from "@/lib/opencode/sse"
 import type {
@@ -51,6 +56,7 @@ function emptyActivity(at: number): SessionActivity {
     currentToolSince: null,
     toolsRun: 0,
     filesTouched: [],
+    recentTools: [],
     lastError: null,
     lastActivityKind: null,
   }
@@ -120,8 +126,9 @@ function errorText(data: Record<string, unknown>): string | null {
 /**
  * SUMMARY path — field-scoped activity updates for ALL sessions. Never
  * touches `messages`: for non-active sessions this records only labels,
- * timestamps, tool names, and file paths extracted from real tool
- * inputs/metadata. The cross-session bleed guard lives in reduceEvent.
+ * timestamps, tool names, tool-call references, and file paths extracted
+ * from real tool inputs/metadata. The cross-session bleed guard lives in
+ * reduceEvent.
  */
 function applyActivity(state: NexusState, e: NexusEvent): NexusState {
   const data = e.data
@@ -130,8 +137,8 @@ function applyActivity(state: NexusState, e: NexusEvent): NexusState {
   const at = e.created
   switch (e.type) {
     case "session.execution.started":
-      // new run: reset run-scoped counters (filesTouched accumulates
-      // session-wide — it is a recent-files list, not a run log)
+      // new run: reset run-scoped counters (filesTouched and recentTools
+      // accumulate session-wide — recent lists, not run logs)
       return updateActivity(state, sessionID, at, {
         currentTool: null,
         currentToolSince: null,
@@ -156,6 +163,8 @@ function applyActivity(state: NexusState, e: NexusEvent): NexusState {
           prev?.filesTouched ?? [],
           extractFilePaths(name, input, undefined),
         ),
+        // reference only (name + timestamp) — never the input payload
+        recentTools: appendRecentTools(prev?.recentTools ?? [], name, at),
       })
     }
     case "session.tool.success":
