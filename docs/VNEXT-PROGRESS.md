@@ -7,10 +7,10 @@ Transform Jerry into a polished observability + session-management companion for
 Phases: A (audit/architecture) → B (session/agent backend) → C (interface overhaul) → D (command center integration) → E (polish/companion foundation).
 
 ## Current Phase
-**COMPLETE + FOLLOW-UPS COMPLETE** — all phases (A–E) done and reviewer-gated (6c259b0); the three recorded follow-ups shipped 2026-11-06 evening (203a5cb + 5667dee), each reviewer-gated, built, restarted, and smoke-passed against the live server.
+**COMPLETE + FOLLOW-UPS COMPLETE + NEW-PROJECT FEATURE COMPLETE** — phases A–E reviewer-gated (6c259b0); follow-ups shipped 2026-11-06 (203a5cb, 5667dee, a33b350); new-project feature shipped 2026-11-09 (46c65aa + cf05615), reviewer-gated ×2, built, restarted, smoke-passed live.
 
 ## Current Task
-None — mission complete. See Status Log F1–F4.
+None. Queued follow-ups: scheduleRefetch should union state.pendingRefetch (two theoretical 500ms loss windows vs SSE markers, pre-existing debounce trait, affects all action-scoped call sites); nexus.test.ts beforeEach should reset `connection`; operator desktop-shell smoke pass; run-counter label reset when connecting mid-run (cosmetic).
 
 ## Status Log
 
@@ -30,6 +30,14 @@ None — mission complete. See Status Log F1–F4.
 | 2026-11-06 | developer | F3 fix: bounded `pendingToolNames` correlation slice (cap 256, evict-oldest, released on success/failed, pruned on delete); unresolved calls bump toolsRun/kind without fabricating; graphify staleness bridge had same dead read — fixed too | done — 126 tests, wire-format fixtures |
 | 2026-11-06 | reviewer | Gate on F3 | APPROVE (3 non-blocking nits, 2 pre-existing) |
 | 2026-11-06 | primary | Rebuild + restart (lock PID 436544) + live re-verification: Tools panel populates from real SSE with resolved names (`execute`, run counter incrementing 1→11); Active-panel strip shares the same resolved branch (unit-covered; live catch of an active row missed only due to run/timing race — runs completed between polls) | done |
+| 2026-11-09 | developer | New-project backend+seam: fs.rs `fs_create_dir` (absolute-only, existed flag) + Transport.createDir + dev-only devfs vite plugin + projectName helpers + nexus.createProject | done — 145 tests, cargo 3 |
+| 2026-11-09 | designer | NewProjectDialog (ConfirmDialog idiom) + ProjectsView header button + AppShell onOpenSession wiring | done — 145 green |
+| 2026-11-09 | reviewer | Gate on new-project feature | APPROVE (validation boundary byte-identical across 3 mirrors; devfs unreachable in prod; 145 vitest + tsc + cargo clean) |
+| 2026-11-09 | primary | Build + restart + live smoke (dev server + Playwright): dialog → mkdir → session → toast → Chat navigation all verified; **found gap**: new project absent from Projects list (server emits no project.updated for new-dir sessions — live-verified) | done |
+| 2026-11-09 | developer | Fix: createProject success path schedules action-scoped `scheduleRefetch(["projects"])` (SSE markers deliberately not widened) | done — 146 tests |
+| 2026-11-09 | primary | Live re-verification: project card + sidebar filter entry appear after debounced refetch; smoke artifacts cleaned (sessions deleted, folders removed) | done |
+| 2026-11-09 | reviewer | Delta gate on refetch fix | APPROVE (queued follow-up: scheduleRefetch union pendingRefetch — pre-existing 500ms loss windows) |
+| 2026-11-09 | primary | Commit 46c65aa + cf05615, build ritual, restart (lock PID 1195659 verified), push | done |
 
 ## Prior context (pre-VNEXT, from project memory)
 - P0 session management shipped 2026-11-05 (commit 1ff6680): priority/stop/kill/delete/bulk + Graphify integration
