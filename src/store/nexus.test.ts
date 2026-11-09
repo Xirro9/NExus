@@ -94,6 +94,34 @@ describe("createProject", () => {
     expect(s.toast?.kind).toBe("info")
   })
 
+  it("schedules a projects refetch after success", async () => {
+    // The server emits no project.updated for a new-session directory, so
+    // createProject must schedule its own refetch. scheduleRefetch debounces
+    // 500ms and only fires while online — fake timers make that deterministic
+    // in the node test env.
+    vi.useFakeTimers()
+    try {
+      useNexus.setState({
+        connection: { ...useNexus.getState().connection, status: "online" },
+      })
+      mockCreateDir.mockResolvedValue({ path: "/tmp/projects/proj", existed: false })
+      mockRequest.mockResolvedValue(okBody([]))
+
+      await useNexus.getState().createProject({
+        name: "proj",
+        parent: "/tmp/projects",
+        openSession: false,
+      })
+      // debounced — no refetch fires before the 500ms timer elapses
+      expect(mockRequest).not.toHaveBeenCalled()
+
+      await vi.advanceTimersByTimeAsync(500)
+      expect(mockRequest.mock.calls.some((c) => c[0] === "/api/project")).toBe(true)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
   it("reports an already-existing directory without opening a session", async () => {
     mockCreateDir.mockResolvedValue({ path: "/tmp/projects/proj", existed: true })
 

@@ -531,6 +531,12 @@ export const useNexus = create<NexusState>()((set, get) => {
               ? `Project created — session opened in ${created.path}`
               : `Project created — ${created.path}`,
         )
+        // opencode v2.2.5 emits no project.updated when a session is created
+        // in a new directory (live-verified), so without an action-scoped
+        // refetch the new project never reaches the Projects list / sidebar
+        // filter. Deliberately NOT wired into the session.created SSE marker —
+        // that would over-refetch projects on every session.
+        scheduleRefetch(["projects"])
         return { ...(sessionID ? { sessionID } : {}), path: created.path }
       } catch (err) {
         handleApiError("createProject", err)
