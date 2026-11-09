@@ -54,6 +54,19 @@ export interface GraphifyExecResult {
   timedOut: boolean
 }
 
+// --- Host filesystem seam (Projects tab "new project") -----------------------
+// Both transports route to a host-side directory creator (Rust fs_create_dir
+// in Tauri, the Vite dev middleware in the browser) that enforces the same
+// absolute-path validation. mkdir ONLY — Jerry never reads or writes files
+// through this seam.
+
+export interface CreateDirResult {
+  /** canonicalized absolute path (symlinks resolved host-side) */
+  path: string
+  /** true when the directory already existed (creation is idempotent) */
+  existed: boolean
+}
+
 export interface Transport {
   request(path: string, init?: TransportRequestInit): Promise<TransportResponse>
   telemetrySnapshot(): Promise<TelemetrySnapshot>
@@ -64,4 +77,8 @@ export interface Transport {
   graphifyDetect(): Promise<GraphifyDetect>
   graphifyStatus(cwd: string): Promise<GraphifyStatus>
   graphifyExec(cwd: string, args: string[]): Promise<GraphifyExecResult>
+  /** Create a directory (with parents) at an absolute host path. Rejects
+   *  empty/relative/NUL/./.. paths; the host side canonicalizes. Not an error
+   *  when the directory already exists (existed:true comes back). */
+  createDir(path: string): Promise<CreateDirResult>
 }

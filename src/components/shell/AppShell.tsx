@@ -144,7 +144,10 @@ export function AppShell() {
             )}
             {mainView === "projects" && (
               <Suspense>
-                <ProjectsView onBrowseAll={browseProjectHistory} />
+                <ProjectsView
+                  onBrowseAll={browseProjectHistory}
+                  onOpenSession={openSessionInChat}
+                />
               </Suspense>
             )}
             {mainView === "system" && (

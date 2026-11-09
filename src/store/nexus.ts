@@ -25,6 +25,7 @@ import {
   savePriorities,
   type SessionPriority,
 } from "@/lib/sessionPriority"
+import { joinProjectPath, sanitizeProjectName } from "@/lib/projectName"
 import type { SessionActivity } from "@/lib/agentState"
 import { applyEvent, type RefetchTarget } from "./events"
 import { FILE_EDIT_TOOLS } from "@/lib/graphify"
@@ -83,6 +84,16 @@ export interface NexusState {
    *  syncGeneration race guard as setActiveSession. */
   loadMessages(sessionID: string, opts?: { force?: boolean }): Promise<void>
   newSession(): Promise<void>
+  /** Create a host project directory (Projects tab "New project"): sanitize
+   *  the name, join onto an absolute parent, mkdir via the host-filesystem
+   *  seam, optionally open a session in it (same state-merge as newSession).
+   *  Resolves { path, sessionID? } on success; null on failure (invalid
+   *  name/parent or API error — already toasted) so a dialog can stay open. */
+  createProject(opts: {
+    name: string
+    parent: string
+    openSession: boolean
+  }): Promise<{ sessionID?: string; path: string } | null>
   /** Resolves true when the prompt was accepted; false on failure (409 etc.)
    *  so the composer can keep the text (§9). Deviates from the spec's
    *  Promise<void> purely as a success signal — no other change. */
@@ -480,6 +491,50 @@ export const useNexus = create<NexusState>()((set, get) => {
         })
       } catch (err) {
         handleApiError("createSession", err)
+      }
+    },
+
+    async createProject(opts) {
+      // 1. UI-side guards — nothing is called until the name and parent pass
+      const clean = sanitizeProjectName(opts.name)
+      if (!clean.ok) {
+        toast("error", clean.reason)
+        return null
+      }
+      let fullPath: string
+      try {
+        fullPath = joinProjectPath(opts.parent, clean.name)
+      } catch (err) {
+        toast("error", err instanceof Error ? err.message : "Invalid parent directory")
+        return null
+      }
+      // 2. mkdir on the host (canonicalization happens Rust-side / devfs-side)
+      try {
+        const created = await api.createDir(fullPath)
+        let sessionID: string | undefined
+        if (opts.openSession) {
+          const session = await api.createSession(created.path)
+          // same state-merge as newSession
+          set({
+            sessions: { ...get().sessions, [session.id]: session },
+            sessionOrder: [session.id, ...get().sessionOrder.filter((id) => id !== session.id)],
+            activeSessionId: session.id,
+            messages: { ...get().messages, [session.id]: [] },
+          })
+          sessionID = session.id
+        }
+        toast(
+          "info",
+          created.existed
+            ? `Directory already exists — ${created.path}`
+            : opts.openSession
+              ? `Project created — session opened in ${created.path}`
+              : `Project created — ${created.path}`,
+        )
+        return { ...(sessionID ? { sessionID } : {}), path: created.path }
+      } catch (err) {
+        handleApiError("createProject", err)
+        return null
       }
     },
 

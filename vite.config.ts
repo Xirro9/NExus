@@ -5,6 +5,7 @@ import tailwindcss from "@tailwindcss/vite"
 import react from "@vitejs/plugin-react"
 import { defineConfig } from "vite"
 
+import { devFsPlugin } from "./src/server/devfs"
 import { graphifyPlugin } from "./src/server/graphify"
 import { telemetryPlugin } from "./src/server/telemetry"
 
@@ -42,7 +43,13 @@ const boot = readService() // target pinned at boot; password re-read per reques
 
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react(), tailwindcss(), telemetryPlugin(), graphifyPlugin()],
+  plugins: [
+    react(),
+    tailwindcss(),
+    telemetryPlugin(),
+    graphifyPlugin(),
+    devFsPlugin(),
+  ],
   resolve: {
     alias: {
       "@": fileURLToPath(new URL("./src", import.meta.url)),

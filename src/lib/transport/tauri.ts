@@ -13,6 +13,7 @@ import type {
 import type { TelemetrySnapshot } from "@/lib/telemetry/types"
 
 import type {
+  CreateDirResult,
   GraphifyDetect,
   GraphifyExecResult,
   GraphifyStatus,
@@ -147,5 +148,13 @@ export const tauriTransport: Transport = {
   ): Promise<GraphifyExecResult> {
     // whitelist violations reject (Err in Rust) — same channel as IPC failures
     return invoke("graphify_exec", { cwd, args })
+  },
+  createDir(path: string): Promise<CreateDirResult> {
+    // validation rejections come back as Err(String) — a bare string reject,
+    // so normalize to Error for readable error toasts (same channel as the
+    // other IPC failures)
+    return invoke<CreateDirResult>("fs_create_dir", { path }).catch((err) => {
+      throw err instanceof Error ? err : new Error(String(err))
+    })
   },
 }

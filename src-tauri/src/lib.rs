@@ -1,4 +1,5 @@
 pub mod api;
+pub mod fs;
 pub mod graphify;
 pub mod service;
 pub mod sse_pump;
@@ -90,6 +91,7 @@ pub fn run() {
         .manage(telemetry::TelemetryState::spawn(client))
         .invoke_handler(tauri::generate_handler![
             api::api_fetch,
+            fs::fs_create_dir,
             graphify::graphify_detect,
             graphify::graphify_status,
             graphify::graphify_exec,

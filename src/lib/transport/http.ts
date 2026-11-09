@@ -5,6 +5,7 @@ import { connectEvents } from "@/lib/opencode/sse"
 import { TELEMETRY_SNAPSHOT_PATH, type TelemetrySnapshot } from "@/lib/telemetry/types"
 
 import type {
+  CreateDirResult,
   GraphifyDetect,
   GraphifyExecResult,
   GraphifyStatus,
@@ -74,5 +75,24 @@ export const httpTransport: Transport = {
       throw new Error(message)
     }
     return (await res.json()) as GraphifyExecResult
+  },
+  async createDir(path) {
+    const res = await fetch("/dev/fs/mkdir", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ path }),
+    })
+    if (!res.ok) {
+      // the middleware returns 4xx with {error} for validation rejections
+      let message = `fs mkdir HTTP ${res.status}`
+      try {
+        const body = (await res.json()) as { error?: string }
+        if (body.error) message = body.error
+      } catch {
+        // keep the status-line message
+      }
+      throw new Error(message)
+    }
+    return (await res.json()) as CreateDirResult
   },
 }

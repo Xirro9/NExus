@@ -437,4 +437,13 @@ export const api = {
     }
     return res.bodyText
   },
+
+  /** Create a host directory (Projects tab "new project"). NOT an OpenCode
+   *  API call — rides the transport's host-filesystem seam (Rust
+   *  fs_create_dir inside the shell, POST /dev/fs/mkdir in the browser).
+   *  Errors reject as plain Error (no HTTP status in the Tauri path) — do
+   *  NOT pattern-match ApiError here. */
+  createDir(path: string): Promise<{ path: string; existed: boolean }> {
+    return transport.createDir(path)
+  },
 }
