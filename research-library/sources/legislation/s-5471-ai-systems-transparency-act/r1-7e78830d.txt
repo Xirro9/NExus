@@ -1,0 +1,312 @@
+119th CONGRESS
+2d Session
+
+S. 5471
+
+To require disclosure of certain information relating to artificial intelligence systems, and for other purposes.
+
+IN THE SENATE OF THE UNITED STATES
+
+September 23, 2026
+
+Mr. Coons (for himself, Mrs. Britt, Mr. Schatz, and Mr. Lankford) introduced the following bill; which was read twice and referred to the Committee on Commerce, Science, and Transportation
+
+A BILL
+
+To require disclosure of certain information relating to artificial intelligence systems, and for other purposes.
+
+Be it enacted by the Senate and House of Representatives of the United States of America in Congress assembled,
+
+SEC. 1. Short title.
+
+This Act may be cited as the “AI Systems Transparency Act”.
+
+SEC. 2. Definitions.
+
+In this Act:
+
+(1) AI RED-TEAMING.—The term “AI red-teaming” means a structured testing effort to find flaws and vulnerabilities of an AI system, often performed—
+
+(A) in a controlled environment and in collaboration with the developers of the AI system; and
+
+(B) by dedicated teams that adopt adversarial methods to identify any flaws or vulnerabilities of the AI system, which may include harmful or discriminatory outputs, unforeseen or undesirable system behaviors, limitations, and potential risks associated with misuse.
+
+(2) ARTIFICIAL INTELLIGENCE MODEL.—The term “artificial intelligence model” means the part of an artificial intelligence system that can be adjusted to modify how the system behaves during inference.
+
+(3) ARTIFICIAL INTELLIGENCE SYSTEM.—The term “artificial intelligence system” has the meaning given the term “artificial intelligence” in section 5002 of the National Artificial Intelligence Initiative Act of 2020 (15 U.S.C. 9401).
+
+(4) CLOUD PROVIDER.—The term “cloud provider” means an entity that offers on-demand network access to a shared pool of configurable computing resources, such as networks, servers, storage, and applications that can be rapidly provisioned and released with minimal management effort.
+
+(5) COMMISSION.—The term “Commission” means the Federal Trade Commission.
+
+(6) COVERED DEPLOYER.—The term “covered deployer” means an entity that operates a covered system which—
+
+(A) for the majority of the months in any 1-year period, has, or is expected to have, not fewer than 1,000,000 unique monthly users in the United States; or
+
+(B) allows minors to create accounts or profiles and has, or is expected to have, not fewer than 100,000 unique monthly users in the United States.
+
+(7) COVERED MODEL.—The term “covered model” means a generative artificial intelligence model, including an open weight model or an open source model, that—
+
+(A) either—
+
+(i) is accessible to the public through a website, software application, an application programming interface, or a licensure through a cloud provider, including as part of a broader AI system; or
+
+(ii) the model weights or architecture of which are made available to the public through the website of a developer, download partners, cloud partners, or software development platform, including in a situation in which accessing such model weights or architecture requires a user to create an account; and
+
+(B) is deployed in covered systems, whether deployed by the developer or another deployer, that—
+
+(i) together have, or are expected to have, not fewer than 1,000,000 unique monthly users in the United States for a majority of the months in any 1-year period; or
+
+(ii) allow minors to create accounts or profiles and that together have, or are expected to have, not fewer than 100,000 unique monthly users in the United States for a majority of the months in any 1-year period.
+
+(8) COVERED PLATFORM.—The term “covered platform” means a website or software application used to interface with a covered system.
+
+(9) COVERED SYSTEM.—The term “covered system” means a covered model or collection of covered models, together with any software component or infrastructure that—
+
+(A) are deployed as an integrated unit; and
+
+(B) operate in a coordinated manner to—
+
+(i) handle different tasks or modalities; or
+
+(ii) materially augment or enhance the capabilities of the covered model.
+
+(10) DEVELOPER.—The term “developer”—
+
+(A) means an entity that initially builds, designs, codes, produces, pre-trains, or owns an artificial intelligence system for internal use or for use by a third party; and
+
+(B) does not include an entity that is solely—
+
+(i) a deployer of the artificial intelligence system; or
+
+(ii) a substantial modifier of the artificial intelligence system.
+
+(11) GENERATIVE ARTIFICIAL INTELLIGENCE MODEL.—The term “generative artificial intelligence model” means an artificial intelligence model that—
+
+(A) emulates the structure and characteristics of input data in order to generate derived synthetic data, including images, videos, audio, text, code, and other digital content;
+
+(B) is trained on broad data;
+
+(C) generally uses self-supervision;
+
+(D) is designed for generality of output; and
+
+(E) is generally applicable across a wide range of contexts, adaptable to a wide range of tasks, or can issue a wide range of outputs in response to inferences.
+
+(12) MACHINE LEARNING.—The term “machine learning” has the meaning given the term in section 5002 of the National Artificial Intelligence Initiative Act of 2020 (15 U.S.C. 9401).
+
+(13) MINOR.—The term “minor” means an individual that has not attained 18 years of age.
+
+(14) MODEL INFERENCE.—The term “model inference” means the process of running data points through an AI system to receive an output, such as a number or text.
+
+(15) MODEL WEIGHT.—The term “model weight” means a numerical parameter within an artificial intelligence model that helps determine the outputs of the model in response to inputs.
+
+(16) OPEN WEIGHT MODEL.—The term “open weight model” means a machine learning model, the weights of which are made publicly available, allowing for access, inspection, modification, and redistribution by any third party.
+
+(17) OPEN SOURCE MODEL.—The term “open source model” means a machine learning model, the weight and model architecture, training code, and methodology of which are made publicly available, allowing for a third party to fully reproduce, audit, and modify the model for custom applications.
+
+(18) POST TRAINING AND INFERENCE ENHANCEMENTS.—The term “post training and inference enhancements” means a process of adjusting or supplementing a pre-trained artificial intelligence model to improve performance on specific tasks, better meet desired performance characteristics, or adhere to safety constraints.
+
+(19) SENIOR.—The term “senior” means an individual that has attained 65 years of age.
+
+(20) SUBSTANTIAL MODIFIER.—The term “substantial modifier” means an entity that significantly alters (as defined by the Commission) the behavior or capabilities of a covered model through post training and inference enhancements.
+
+(21) SYNTHETIC DATA.—The term “synthetic data” means data that is artificially manufactured, typically by a computer program.
+
+(22) VULNERABLE USER.—The term “vulnerable user” means a minor, a senior, an individual with a disability, or an individual experiencing a mental health crisis.
+
+SEC. 3. Guidelines for model versioning and other designations.
+
+(a) Model versioning.—Not later than 150 days after the date of enactment of this Act, the Commission, in consultation with the Director of the National Institute of Standards and Technology, shall issue guidance regarding when a developer has produced a distinct generative artificial intelligence model through—
+
+(1) development, including novel pre-training of a model architecture; or
+
+(2) any update to, or improvement or iteration of, an existing generative artificial intelligence model.
+
+(b) Designation process.—
+
+(1) IN GENERAL.—Not later than 150 days after the date of enactment of this Act, the Commission, in consultation with the Director of the National Institute of Standards and Technology, shall promulgate regulations in accordance with section 553 of title 5, United States Code, to establish criteria—
+
+(A) to determine when a deployment of a generative artificial intelligence model is expected to have sufficient users to meet the criteria described in—
+
+(i) paragraph (6) of section 2 for a deployer to be considered a covered deployer; or
+
+(ii) paragraph (7) of section 2 for a generative artificial intelligence model to be considered a covered model; and
+
+(B) to designate a generative artificial intelligence model or a particular deployment of a generative artificial intelligence model as a covered model or covered system, based on a determination that it poses a significant risk to safety of minors, vulnerable users, or the public.
+
+(2) REQUIREMENTS.—In establishing the criteria to make a designation under paragraph (1)(B), the Commission, in consultation with the Director of the National Institute of Standards and Technology, shall do the following:
+
+(A) Consider the capabilities of the generative artificial intelligence model, the contexts in which the model is deployed or reasonably likely to be deployed (including the degree of access by vulnerable users), and the severity and reversibility of the harms reasonably foreseeable from those capabilities.
+
+(B) Accompany any such designation with written findings, which shall be made publicly available.
+
+(C) Provide the developer of the model or the deployer of the system with written notice and not fewer than 30 days to respond before any such designation takes effect, except that a designation may take effect immediately upon a finding by the Commission of imminent and significant risk, in which case the Commission shall provide such notice and opportunity to respond not later than 30 days after the effective date and shall confirm, modify, or rescind the designation not later than 60 days after the effective date.
+
+SEC. 4. Artificial intelligence model disclosure mandates for developers.
+
+(a) Regulations.—
+
+(1) IN GENERAL.—Not later than 150 days after the date of enactment of this Act, the Commission, in consultation with the Director of the National Institute of Standards and Technology, shall promulgate regulations in accordance with section 553 of title 5, United States Code, requiring each developer of a covered model (including a distinct generative artificial intelligence model that meets the definition of a covered model) to make publicly available the information described in subsections (b) and (c)—
+
+(A) in a form determined by the Commission that includes 2 separate disclosures, including—
+
+(i) 1 disclosure containing information relevant to, and sufficiently detailed to facilitate clear understanding for, a consumer; and
+
+(ii) 1 disclosure containing all information described in subsections (b) and (c) sufficiently detailed to permit meaningful review by an independent researcher; and
+
+(B) in a manner that—
+
+(i) is accurate, materially complete, not misleading by reason of a material omission, and adequate under standards determined by the Commission;
+
+(ii) does not rely primarily on generalized or conclusory language;
+
+(iii) facilitates transparency, public trust, and independent evaluation;
+
+(iv) makes the information useful and actionable, including that the information is—
+
+(I) reliably available in a clear and conspicuous section of the website of the developer that can be easily located and accessed by a consumer in alignment with the Plain Writing Act of 2010 (5 U.S.C. 301 note);
+
+(II) searchable; and
+
+(III) available through an application programming interface;
+
+(v) does not disclose trade secrets; and
+
+(vi) does not expose classified systems or create national security risks.
+
+(2) CONSULTATION.—In promulgating the regulations under paragraph (1), the Commission and the Director of the National Institute of Standards and Technology shall engage relevant Federal agencies (including the Department of Health and Human Services, the Substance Abuse and Mental Health Services Administration, and the National Institute of Mental Health) and third-parties with expertise relating to consumer protection, the safety of minors, behavioral science, mental health, and human-computer interaction to ensure that the disclosure required by such regulations reflects best practices and includes the appropriate information.
+
+(b) Initial public disclosure.—
+
+(1) IN GENERAL.—The information described in this subsection shall include the following:
+
+(A) Information relating to consumer transparency, safety protocols for vulnerable users, and other practices associated with the covered model, including—
+
+(i) an overview of preventative safety safeguards for minors implemented during pre-deployment testing and model development;
+
+(ii) an overview of measures taken to protect user privacy (including the privacy of minors) in training data, such as through data filtering or anonymization methods, and measures taken to protect user privacy (including the privacy of minors) on covered platforms;
+
+(iii) an overview of measures taken to ensure the safety of minors in training data, such as through data filtering of child sexual abuse material;
+
+(iv) an overview of privacy standards pertaining to the management, use, storage, and potential sale of user data (including the data of minors), including whether user data is used for targeted advertising, user safety, internal or external research, and model training;
+
+(v) the durability and efficacy of vulnerable user safeguards (including preventing the generation of child sexual abuse material and non-consensual intimate imagery), as well as the resiliency and scope of such features;
+
+(vi) an overview of user and company reporting procedures for model behavior that poses a credible risk of material assistance to suicidal ideation or suicide planning, or that poses a credible risk of material assistance to harm to others, including model behavior learned in the post-deployment phase, and whether such procedures were informed by crisis intervention experts and established standards; and
+
+(vii) as appropriate, the risk of negative impacts for vulnerable users on topics pertaining to mental health and well-being, including disclosure of research on the short-term and long-term emotional and psychological impacts of use for vulnerable users, and methodological standards for such research.
+
+(B) System overviews of the covered model, including—
+
+(i) a high-level description of the intended, unintended, and prohibited uses of the covered model, as reasonably anticipated by the developer;
+
+(ii) a high-level description, including abilities and limitations, of the covered model;
+
+(iii) if applicable, a high-level overview of any difference between the covered model that is the subject of the disclosure and most recent previous version of the covered model that is considered a distinct generative artificial intelligence model according to the guidance issued under section 3;
+
+(iv) a list of each covered platform and interface through which the covered model is accessible;
+
+(v) a list of input and output formats supported by the covered model; and
+
+(vi) an overview of the ability of the covered model to trigger actions or computations external to the covered model during model inference.
+
+(C) An overview of the post training and inference enhancements of the covered model and relevant methodologies.
+
+(D) Information relating to safety, security, and evaluation protocols and practices associated with the covered model, including—
+
+(i) a high-level overview of procedures or guiding principles for—
+
+(I) determining what constitutes desirable model behavior;
+
+(II) ensuring desirable covered model behavior; and
+
+(III) preventing undesirable covered model behavior;
+
+(ii) a description of methods or approaches used to evaluate and mitigate the risk that a model or the outputs of a related system are lower in quality or accuracy than intended use cases would require or expect;
+
+(iii) subject to subsection (d), an overview of measures taken to protect the covered model and training data from attack or misuse, including—
+
+(I) traditional cybersecurity protocols, such as access controls and multi-factor authentication; and
+
+(II) protections unique to AI systems, such as preventing model weight exfiltration, data poisoning, and prompt injections;
+
+(iv) with respect to open weight models, an overview of the measures taken to protect training data from attack;
+
+(v) an overview of the criteria by which the developer chose to publicly release the covered model, such as evaluation against a risk framework;
+
+(vi) a description of each of the evaluation criteria used to assess the risk profile of the covered model, which shall address, at a minimum, chemical, biological, radiological, and nuclear risk, offensive cyber risk, autonomous loss-of-control risk, and any similar additional risk domain specified by the Commission, and which shall include, for any such domain in which the developer conducted no evaluation, an affirmative statement to that effect;
+
+(vii) an overview of the testing procedures and methods for achieving risk profile evaluations, such as AI red-teaming, collaboration with external subject matter experts, or solicitation of reports of model vulnerabilities from independent evaluators; and
+
+(viii) an overview of the performance of the covered model on common public benchmarks determined by the Commission in coordination with the Director of the National Institute of Standards and Technology, including any related information and in a form necessary for independent researchers to verify the performance of the covered model on each benchmark, such as prompts and configuration settings.
+
+(2) TIMING OF DISCLOSURE.—After the date on which the Commission issues guidance under section 3, a developer shall make publicly available the information described in paragraph (1)—
+
+(A) with respect to the most recent version of a covered model released to the public during the 2-year period before such date, not later than 90 days after such date;
+
+(B) with respect to a covered model released on or after such date, concurrent with such release; or
+
+(C) with respect to the most recent version of a distinct generative artificial intelligence model released on or after such date that, at a time after its release, meets the definition of a covered model, not later than 90 days after such time.
+
+(c) Subsequent public disclosures.—
+
+(1) REQUIREMENT.—The information described in paragraph (2), with respect to a covered model, shall be made available to the public at such time, as determined by the Commission, and on an ongoing basis until the Commission determines that such disclosure is no longer necessary.
+
+(2) INFORMATION REQUIRED.—The information described in this paragraph is as follows:
+
+(A) Any significant change (as defined by the Commission in coordination with the Director of the National Institute of Standards and Technology, including any substantial modification to, or observed differences from, the most recent prior public disclosure under this section, and not including any immaterial variation for which a disclosure requirement would overly burden platform operations) to any of the information described in subsection (b) from the information reported in the initial information disclosure, or, if applicable, any information reported in a subsequent disclosure.
+
+(B) Information including—
+
+(i) data dictionaries or equivalent documentation that explain significant datasets, as defined by the Commission, in the possession of a developer related to the covered model, including datasets that the developer maintains relating to the users of the relevant covered platforms, usage of the covered platforms, content generated on covered platforms, and actions taken to enforce the terms of service of covered platforms; and
+
+(ii) information relating to usage of the covered model, including—
+
+(I) an overview of the most common violations of covered model policies regarding acceptable use, including common violations pertaining to minor safety;
+
+(II) an overview of how often the model refuses a prohibited prompt and the developer has taken moderation actions in response to violations of acceptable use policies, including what those actions are;
+
+(III) an overview of information pertaining to attempts by users to utilize covered models to generate child sexual abuse material or non-consensual intimate imagery; and
+
+(IV) an overview of known system capabilities for the utilization of the covered model to develop or advance cyber, chemical, biological, radiological, and nuclear threats.
+
+(d) Special rules for disclosures.—
+
+(1) IN GENERAL.—With respect to any disclosure required under clause (iii) or (vi) of subsection (b)(1)(D) or under subsection (c)(2)(B)(ii), such requirement shall not be interpreted to require a developer to disclose any information that, as determined by the Commission—
+
+(A) would compromise cybersecurity practices or protections or safety practices or protections of the developer; or
+
+(B) could provide material assistance to the development, acquisition, or deployment of chemical, biological, radiological, nuclear, or offensive cyber weapons or capabilities.
+
+(2) RULE OF CONSTRUCTION.—Paragraph (1) shall not be construed to permit a developer to withhold—
+
+(A) the fact that an evaluation in a risk domain described in subsection (b)(1)(D)(vi) was or was not conducted; or
+
+(B) a general characterization of the results of any such evaluation, at a level of detail that does not include information described in paragraph (1).
+
+(e) Reporting requirement for substantial modifiers.—Not later than 1 year after the date of enactment of this Act, the Commission, in consultation with the Director of the National Institute of Standards and Technology, shall promulgate regulations in accordance with section 553 of title 5, United States Code, requiring each substantial modifier to make publicly available the information described in subsections (b) and (c), as the Commission determines appropriate with respect to a substantial modifier.
+
+(f) Resources.—The Commission shall provide covered platforms with technical assistance to support compliance with the requirements of this Act, particularly with respect to small and mid-sized platforms, as determined by the Commission.
+
+SEC. 5. Mandatory disclosures for covered deployers of covered systems.
+
+Not later than 150 days after the date of enactment of this Act, the Commission, in consultation with the Director of the National Institute of Standards and Technology, shall promulgate regulations in accordance with section 553 of title 5, United States Code, to establish disclosure requirements for covered deployers with respect to covered systems consistent with the requirements for developers of covered models described in section 4, as determined by the Commission to be appropriate for a covered deployer with respect to a covered system.
+
+SEC. 6. Enforcement.
+
+(a) Unfair or deceptive acts or practices.—A violation of section 4 or 5 or a regulation promulgated under this Act shall be treated as a violation of a rule defining an unfair or deceptive act or practice under section 18(a)(1)(B) of the Federal Trade Commission Act (15 U.S.C. 57a(a)(1)(B)).
+
+(b) Powers of the Commission.—
+
+(1) IN GENERAL.—The Commission shall enforce this Act in the same manner, by the same means, and with the same jurisdiction, powers, and duties as though all applicable terms and provisions of the Federal Trade Commission Act (15 U.S.C. 41 et seq.) were incorporated into and made a part of this Act.
+
+(2) PRIVILEGES AND IMMUNITIES.—Any person who violates section 4 or 5 or a regulation promulgated under this Act shall be subject to the penalties and entitled to the privileges and immunities provided in the Federal Trade Commission Act (15 U.S.C. 41 et seq.).
+
+(3) AUTHORITY PRESERVED.—Nothing in this Act shall be construed to limit the authority of the Commission under any other provision of law.
+
+(4) RULEMAKING.—Not later than 1 year after the date of enactment of this Act, the Commission shall promulgate in accordance with section 553 of title 5, United States Code, such rules as may be necessary to carry out this Act.
+
+SEC. 7. Severability.
+
+If any provision of this Act, or the application of such provision to any person or circumstance, is held to be unconstitutional, the remainder of this Act, and the application of the remaining provisions of this Act to any person or circumstance, shall not be affected.

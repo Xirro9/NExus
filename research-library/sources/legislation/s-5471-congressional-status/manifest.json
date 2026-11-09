@@ -1,0 +1,52 @@
+{
+  "schema": 1,
+  "collection": "legislation",
+  "slug": "s-5471-congressional-status",
+  "title": "S. 5471 — Congressional status record (119th Congress, 2d Session)",
+  "sourceUrl": "https://www.congress.gov/bill/119th-congress/senate-bill/5471",
+  "publicationDate": "2026-09-23",
+  "version": "introduced",
+  "status": "verified",
+  "notes": "Status: Introduced (not enacted), checked 2026-11-09 — read twice and referred to the Senate Committee on Commerce, Science, and Transportation. Sponsor Sen. Coons (D-DE); cosponsors Britt (R-AL), Schatz (D-HI), Lankford (R-OK). 119th Congress, 2d Session. Composed 2026-11-09 from the congress.gov bill page and the govinfo content details page for BILLS-119s5471is, both fetched live this session (fetch-check date 2026-11-09). Tracker position Introduced; CRS policy area Commerce.",
+  "verifiedAt": 1794256213432,
+  "sections": [
+    {
+      "anchor": "identification",
+      "heading": "Bill identification",
+      "body": "Bill number: S. 5471 (Introduced in Senate, version IS)\nShort title: AI Systems Transparency Act\nFull title: To require disclosure of certain information relating to artificial intelligence systems, and for other purposes.\nCongress: 119th Congress, 2d Session\nIntroduction date: September 23, 2026\nSponsor: Sen. Coons, Christopher A. [D-DE] (Introduced 09/23/2026) — congress.gov; govinfo lists Christopher A. Coons (DE)\nCosponsors (3): Katie Boyd Britt (AL); Brian Schatz (HI); James Lankford (OK) — as listed on the govinfo content details page\nCommittee: Senate — Commerce, Science, and Transportation (Standing)"
+    },
+    {
+      "anchor": "actions",
+      "heading": "Legislative actions (as of 2026-11-09)",
+      "body": "congress.gov Latest Action: Senate - 09/23/2026 Read twice and referred to the Committee on Commerce, Science, and Transportation.\n\ncongress.gov action record: actionDate 2026-09-23; displayText \"Introduced in Senate\"; visitCode 10000; description \"Introduced\"; chamberOfAction \"Senate\".\n\ngovinfo Last Action Date Listed: September 23, 2026 — \"Mr. Coons (for himself, Mrs. Britt, Mr. Schatz, and Mr. Lankford) introduced the following bill; which was read twice and referred to the Committee on Commerce, Science, and Transportation\"\n\ncongress.gov counts as of 2026-11-09: Actions (1); Text versions (1); Titles (2); Cosponsors (3); Committees (1); Amendments (0); Related Bills (0); CBO Cost Estimates (0); Summaries (0) — \"A summary is in progress.\""
+    },
+    {
+      "anchor": "tracker",
+      "heading": "Tracker position",
+      "body": "Tracker position: Introduced. congress.gov status line: \"This bill has the status Introduced.\" Later tracker stages displayed by congress.gov — Passed Senate, Passed House, To President, Became Law — had not been reached as of 2026-11-09."
+    },
+    {
+      "anchor": "policy-area",
+      "heading": "Subject — policy area",
+      "body": "Subject — Policy Area: Commerce (congress.gov).\n\ngovinfo classification: Category \"Bills and Statutes\"; Collection \"Congressional Bills\"; SuDoc Class Number Y 1.6:Y 1.4/1:; Bill Version \"Introduced in Senate (IS)\"."
+    },
+    {
+      "anchor": "us-code-references",
+      "heading": "United States Code references",
+      "body": "United States Code references (govinfo content details page): 5 U.S.C. 301 and 553; 15 U.S.C. 41, 57a, and 9401."
+    },
+    {
+      "anchor": "sources",
+      "heading": "Sources",
+      "body": "congress.gov bill page: https://www.congress.gov/bill/119th-congress/senate-bill/5471 (fetched live 2026-11-09)\n\ngovinfo content details: https://www.govinfo.gov/app/details/BILLS-119s5471is (fetched live 2026-11-09)\n\ngovinfo bill text (XHTML): https://www.govinfo.gov/content/pkg/BILLS-119s5471is/xhtml/BILLS-119s5471is.html (fetched live 2026-11-09; ingested separately as legislation/s-5471-ai-systems-transparency-act)"
+    }
+  ],
+  "revisions": [
+    {
+      "revision": 1,
+      "contentHash": "dbe77ee90813608a1e63313cca31af22c72156a9e255fcc1472ed03811c7b977",
+      "retrievedAt": 1794256204557,
+      "file": "research-library/sources/legislation/s-5471-congressional-status/r1-dbe77ee9.html"
+    }
+  ]
+}

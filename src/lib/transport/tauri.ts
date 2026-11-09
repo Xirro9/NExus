@@ -17,6 +17,11 @@ import type {
   GraphifyDetect,
   GraphifyExecResult,
   GraphifyStatus,
+  ResearchCollectionSummary,
+  ResearchDocumentRecord,
+  ResearchReindexResult,
+  ResearchSearchResult,
+  ResearchStatus,
   Transport,
   TransportRequestInit,
   TransportResponse,
@@ -156,5 +161,46 @@ export const tauriTransport: Transport = {
     return invoke<CreateDirResult>("fs_create_dir", { path }).catch((err) => {
       throw err instanceof Error ? err : new Error(String(err))
     })
+  },
+  researchStatus(root: string | null): Promise<ResearchStatus> {
+    // root null → Rust resolves via RESEARCH_LIBRARY_ROOT (honest error when
+    // unset — the desktop app never guesses from cwd)
+    return invoke("research_status", { root })
+  },
+  researchCollections(root: string): Promise<ResearchCollectionSummary[]> {
+    return invoke("research_collections", { root })
+  },
+  researchSearch(
+    root: string,
+    q: string,
+    opts?: { collection?: string; limit?: number; scope?: "all" | "documents" | "sections" },
+  ): Promise<ResearchSearchResult> {
+    // explicit nulls for absent optionals (telemetry_snapshot { tail: null }
+    // precedent) — Rust Option<T> deserializes them as None
+    return invoke("research_search", {
+      root,
+      q,
+      collection: opts?.collection ?? null,
+      limit: opts?.limit ?? null,
+      scope: opts?.scope ?? null,
+    })
+  },
+  researchDocument(
+    root: string,
+    id: string,
+    opts?: { section?: string; maxChars?: number },
+  ): Promise<ResearchDocumentRecord | null> {
+    // CLI exit 3 (not found) → Ok(None) → null — honest not-found, no throw.
+    // maxChars camelCase here maps to the Rust max_chars param (tauri auto-
+    // converts camelCase invoke keys to snake_case command args).
+    return invoke<ResearchDocumentRecord | null>("research_document", {
+      root,
+      id,
+      section: opts?.section ?? null,
+      maxChars: opts?.maxChars ?? null,
+    })
+  },
+  researchReindex(root: string): Promise<ResearchReindexResult> {
+    return invoke("research_reindex", { root })
   },
 }

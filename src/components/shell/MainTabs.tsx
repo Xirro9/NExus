@@ -18,6 +18,7 @@ export type MainView =
   | "agents"
   | "history"
   | "projects"
+  | "research"
   | "system"
   | "settings"
 
@@ -28,6 +29,7 @@ const TABS: { id: MainView; label: string }[] = [
   { id: "agents", label: "Agents" },
   { id: "history", label: "History" },
   { id: "projects", label: "Projects" },
+  { id: "research", label: "Research" },
   { id: "system", label: "System" },
   { id: "settings", label: "Settings" },
 ]

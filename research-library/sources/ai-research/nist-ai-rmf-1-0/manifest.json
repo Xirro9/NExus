@@ -1,0 +1,42 @@
+{
+  "schema": 1,
+  "collection": "ai-research",
+  "slug": "nist-ai-rmf-1-0",
+  "title": "Artificial Intelligence Risk Management Framework (AI RMF 1.0), NIST AI 100-1",
+  "sourceUrl": "https://www.nist.gov/publications/artificial-intelligence-risk-management-framework-ai-rmf-10",
+  "publicationDate": "2023-01-26",
+  "version": "current",
+  "status": "verified",
+  "notes": "Summary ingested from the NIST publication page for AI 100-1 (abstract and metadata) and the NIST AI RMF program page, both fetched live 2026-11-09; full text: https://doi.org/10.6028/NIST.AI.100-1 (PDF not fetchable as text this session). NIST program page states AI RMF 1.0 revision underway as part of the White House AI Action Plan (checked 2026-11-09). Relevance: S. 5471 disclosure and evaluation provisions map onto the RMF's Govern/Map/Measure/Manage functions and NIST is named as consultee throughout the bill.",
+  "verifiedAt": 1794256213514,
+  "sections": [
+    {
+      "anchor": "abstract",
+      "heading": "Abstract",
+      "body": "As directed by the National Artificial Intelligence Initiative Act of 2020 (P.L. 116-283), the goal of the AI RMF is to offer a resource to the organizations designing, developing, deploying, or using AI systems to help manage the many risks of AI and promote trustworthy and responsible development and use of AI systems. The Framework is intended to be voluntary, rights-preserving, non-sector specific, and use-case agnostic, providing flexibility to organizations of all sizes and in all sectors and throughout society to implement the approaches in the Framework. The AI RMF is intended to be practical, to adapt to the AI landscape as AI technologies continue to develop, and to be operationalized by organizations in varying degrees and capacities so society can benefit from AI while also being protected from its potential harms."
+    },
+    {
+      "anchor": "publication-details",
+      "heading": "Publication details",
+      "body": "Report number: NIST AI 100-1 (NIST Trustworthy and Responsible AI series).\nPublished: January 26, 2023. Author: Elham Tabassi.\nDOI: https://doi.org/10.6028/NIST.AI.100-1\nCitation (NIST publication page): Tabassi, E. (2023), Artificial Intelligence Risk Management Framework (AI RMF 1.0), NIST Trustworthy and Responsible AI, National Institute of Standards and Technology, Gaithersburg, MD, https://doi.org/10.6028/NIST.AI.100-1\nKeywords (NIST publication page): Artificial Intelligence (AI), AI, AI RMF, AI RMF 1.0, AI systems, trustworthy and responsible AI."
+    },
+    {
+      "anchor": "program-context",
+      "heading": "AI RMF program context (checked 2026-11-09)",
+      "body": "From the NIST AI RMF program page (https://www.nist.gov/itl/ai-risk-management-framework), fetched live 2026-11-09: the AI RMF, led by NIST's Information Technology Laboratory (ITL) AI Program and developed with the private and public sectors, is intended for voluntary use and to improve the ability to incorporate trustworthiness considerations into the design, development, use, and evaluation of AI products, services, and systems. Companion resources published by NIST: the AI RMF Playbook, an AI RMF Roadmap, an AI RMF Crosswalk, and various Perspectives; the Trustworthy and Responsible AI Resource Center (AIRC) launched March 30, 2023. On July 26, 2024, NIST released NIST AI 600-1, the Generative AI Profile (ingested separately as ai-research/nist-ai-600-1-genai-profile). On April 7, 2026, NIST released a concept note for an AI RMF Profile on Trustworthy AI in Critical Infrastructure. The page states that AI RMF 1.0 is being revised as part of the White House AI Action Plan — verify current revision status before citing AI RMF 1.0 as the latest version."
+    },
+    {
+      "anchor": "relevance",
+      "heading": "Relevance to S. 5471",
+      "body": "S. 5471 directs the Federal Trade Commission to act in consultation with the Director of the National Institute of Standards and Technology throughout (SEC. 3-6), and its disclosure and evaluation mandates — consumer-facing transparency, risk-profile evaluations across defined risk domains, AI red-teaming, and benchmark performance reporting — map onto the AI RMF's Govern/Map/Measure/Manage functions and its trustworthy-AI characteristics. This record is a summary of the framework's official publication metadata and program context, not the full framework text."
+    }
+  ],
+  "revisions": [
+    {
+      "revision": 1,
+      "contentHash": "3fd4ea2ecd5bedc9572530730e755fe00dfa3a912ab3875b4ae6f9011067a067",
+      "retrievedAt": 1794256204634,
+      "file": "research-library/sources/ai-research/nist-ai-rmf-1-0/r1-3fd4ea2e.html"
+    }
+  ]
+}

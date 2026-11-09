@@ -1,6 +1,7 @@
 pub mod api;
 pub mod fs;
 pub mod graphify;
+pub mod research;
 pub mod service;
 pub mod sse_pump;
 pub mod telemetry;
@@ -95,6 +96,11 @@ pub fn run() {
             graphify::graphify_detect,
             graphify::graphify_status,
             graphify::graphify_exec,
+            research::research_status,
+            research::research_collections,
+            research::research_search,
+            research::research_document,
+            research::research_reindex,
             sse_pump::event_stream_start,
             sse_pump::event_stream_stop,
             telemetry::telemetry_snapshot

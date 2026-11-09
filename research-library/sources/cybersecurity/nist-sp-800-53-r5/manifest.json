@@ -1,0 +1,47 @@
+{
+  "schema": 1,
+  "collection": "cybersecurity",
+  "slug": "nist-sp-800-53-r5",
+  "title": "NIST SP 800-53 Rev. 5, Security and Privacy Controls for Information Systems and Organizations",
+  "sourceUrl": "https://csrc.nist.gov/pubs/sp/800/53/r5/upd1/final",
+  "publicationDate": "2020-12-10",
+  "version": "current",
+  "status": "verified",
+  "notes": "Summary ingested from the CSRC publication page (abstract, metadata, control families, release notes), fetched live 2026-11-09; full text: https://doi.org/10.6028/NIST.SP.800-53r5 (PDF not fetchable as text this session). Page displays initial publication September 2020 with updates as of December 10, 2020 and a Planning Note (August 27, 2025) for minor release 5.2.0; no separate Update 1 entry is shown on the page. Relevance: applicable control reference for S. 5471 SEC. 4(b)(1)(D)(iii)(I) traditional cybersecurity protocols (access controls, MFA).",
+  "verifiedAt": 1794256213742,
+  "sections": [
+    {
+      "anchor": "abstract",
+      "heading": "Abstract",
+      "body": "This publication provides a catalog of security and privacy controls for information systems and organizations to protect organizational operations and assets, individuals, other organizations, and the Nation from a diverse set of threats and risks, including hostile attacks, human errors, natural disasters, structural failures, foreign intelligence entities, and privacy risks. The controls are flexible and customizable and implemented as part of an organization-wide process to manage risk. The controls address diverse requirements derived from mission and business needs, laws, executive orders, directives, regulations, policies, standards, and guidelines. Finally, the consolidated control catalog addresses security and privacy from a functionality perspective (i.e., the strength of functions and mechanisms provided by the controls) and from an assurance perspective (i.e., the measure of confidence in the security or privacy capability provided by the controls). Addressing functionality and assurance helps to ensure that information technology products and the systems that rely on those products are sufficiently trustworthy."
+    },
+    {
+      "anchor": "publication-details",
+      "heading": "Publication details",
+      "body": "Publication: NIST SP 800-53 Rev. 5, \"Security and Privacy Controls for Information Systems and Organizations\" (CSRC page for the upd1 final release).\nAuthor: Joint Task Force.\nDate Published: September 2020 (includes updates as of Dec. 10, 2020). Supersedes: SP 800-53 Rev. 5 (09/23/2020). Document history: 12/10/20: SP 800-53 Rev. 5 (Final).\nDOI: https://doi.org/10.6028/NIST.SP.800-53r5\nPublication parts listed by CSRC: SP 800-53A Rev. 5 (assessment procedures) and SP 800-53B (control baselines). An OSCAL version of the Rev. 5 controls is available in JSON, XML, and YAML.\nNote recorded as shown on the fetched page: the CSRC page displays the September 2020 initial publication with updates as of December 10, 2020 and a Release 5.2.0 planning note dated August 27, 2025; it does not display a separate \"Update 1\" (2023-11) entry."
+    },
+    {
+      "anchor": "control-families",
+      "heading": "Control families",
+      "body": "Control families listed on the CSRC page (20): Access Control; Awareness and Training; Audit and Accountability; Assessment, Authorization and Monitoring; Configuration Management; Contingency Planning; Identification and Authentication; Incident Response; Maintenance; Media Protection; Physical and Environmental Protection; Planning; Program Management; Personnel Security; PII Processing and Transparency; Risk Assessment; System and Services Acquisition; System and Communications Protection; System and Information Integrity; Supply Chain Risk Management."
+    },
+    {
+      "anchor": "release-notes",
+      "heading": "Release notes (Planning Note, August 27, 2025)",
+      "body": "Planning Note (08/27/2025) as shown on the CSRC page: on August 27, 2025, NIST issued a minor release of SP 800-53 (Release 5.2.0) that includes:\n- New controls/control enhancements: SA-15(13), SA-24, SI-02(07)\n- Revisions to existing controls: SI-07(12)\n- Updates to control discussion: SA-04, SA-05, SA-08, SA-08(14), SI-02, SI-02(05)\n- Updates to related controls: all -01 controls, AU-02, AU-03, CA-07, IR-04, IR-06, IR-08, SA-15, SI-02, SI-07\nA list of all changes in the patch release is available under Supplemental Material on the CSRC page."
+    },
+    {
+      "anchor": "relevance",
+      "heading": "Relevance to S. 5471",
+      "body": "S. 5471 SEC. 4(b)(1)(D)(iii) requires an overview of measures taken to protect the covered model and training data from attack or misuse, including \"traditional cybersecurity protocols, such as access controls and multi-factor authentication\" (clause (I)) and AI-specific protections such as preventing model weight exfiltration, data poisoning, and prompt injections (clause (II)). SP 800-53 Rev. 5 is the federal control catalog covering the traditional side — e.g., the Access Control (AC) and Identification and Authentication (IA) families — and is the applicable control reference for such disclosures. This record is a summary from the CSRC publication page, not the full control catalog."
+    }
+  ],
+  "revisions": [
+    {
+      "revision": 1,
+      "contentHash": "1a8984425d512b2b075f2890abdc3bb4d99db49d82fd282a02be0cc1f22ad347",
+      "retrievedAt": 1794256204873,
+      "file": "research-library/sources/cybersecurity/nist-sp-800-53-r5/r1-1a898442.html"
+    }
+  ]
+}

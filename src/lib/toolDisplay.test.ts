@@ -3,7 +3,11 @@
 
 import { describe, expect, it } from "vitest"
 
-import { extractFilePaths, formatToolCall } from "./toolDisplay"
+import {
+  extractFilePaths,
+  formatToolCall,
+  researchSourceOf,
+} from "./toolDisplay"
 
 describe("formatToolCall — known tools", () => {
   it("read: title + path detail", () => {
@@ -179,5 +183,88 @@ describe("extractFilePaths", () => {
   it("never guesses: absent input/metadata → empty", () => {
     expect(extractFilePaths("edit", undefined, undefined)).toEqual([])
     expect(extractFilePaths("edit", {}, {})).toEqual([])
+  })
+})
+
+// --- research-library tools (T5) ----------------------------------------------
+// The six bare plugin tools get kind "research" with honest card titles; the
+// internal-vs-external tally uses researchSourceOf, a SEPARATE helper — the
+// webfetch → "other" pin above is untouched on purpose.
+
+describe("formatToolCall — research-library tools", () => {
+  const TITLES: [string, string][] = [
+    ["research_library_search", "Library search"],
+    ["research_library_list", "Library list"],
+    ["research_library_get", "Library document"],
+    ["research_library_import", "Library import"],
+    ["research_library_refresh", "Library reindex"],
+    ["research_library_status", "Library status"],
+  ]
+
+  it("six bare tools → kind research with honest titles, no fabricated detail", () => {
+    for (const [name, title] of TITLES) {
+      const d = formatToolCall(name, {}, undefined)
+      expect(d).toMatchObject({ title, kind: "research", filePaths: [] })
+      expect(d.detail).toBeUndefined()
+    }
+  })
+
+  it("detail from input: query / slug / docId, whichever is present", () => {
+    expect(
+      formatToolCall("research_library_search", { query: "SEC. 4" }, undefined).detail,
+    ).toBe("SEC. 4")
+    expect(
+      formatToolCall("research_library_get", { docId: "legislation/s-5471" }, undefined)
+        .detail,
+    ).toBe("legislation/s-5471")
+    expect(
+      formatToolCall("research_library_import", { slug: "congressional-status" }, undefined)
+        .detail,
+    ).toBe("congressional-status")
+  })
+
+  it("query wins when several keys are present; weird input shapes stay safe", () => {
+    const d = formatToolCall(
+      "research_library_search",
+      { query: "ai", slug: "x", docId: "c/y" },
+      undefined,
+    )
+    expect(d.detail).toBe("ai")
+    const weird = formatToolCall("research_library_refresh", 42, undefined)
+    expect(weird.kind).toBe("research")
+    expect(weird.detail).toBeUndefined()
+  })
+})
+
+describe("researchSourceOf", () => {
+  it("the six research_library_* tools are internal", () => {
+    for (const name of [
+      "research_library_search",
+      "research_library_list",
+      "research_library_get",
+      "research_library_import",
+      "research_library_refresh",
+      "research_library_status",
+    ]) {
+      expect(researchSourceOf(name)).toBe("internal")
+    }
+  })
+
+  it("internal is a prefix rule — a future seventh library tool classifies as internal", () => {
+    expect(researchSourceOf("research_library_something_new")).toBe("internal")
+    expect(researchSourceOf("RESEARCH_LIBRARY_GET")).toBe("internal") // case-insensitive
+  })
+
+  it("web tools are external", () => {
+    expect(researchSourceOf("webfetch")).toBe("external")
+    expect(researchSourceOf("websearch")).toBe("external")
+  })
+
+  it("everything else is neither — never guessed", () => {
+    expect(researchSourceOf("bash")).toBeNull()
+    expect(researchSourceOf("subagent")).toBeNull()
+    expect(researchSourceOf("grep")).toBeNull()
+    expect(researchSourceOf("totally_unknown")).toBeNull()
+    expect(researchSourceOf("")).toBeNull()
   })
 })

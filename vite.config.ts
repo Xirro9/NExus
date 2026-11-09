@@ -7,6 +7,7 @@ import { defineConfig } from "vite"
 
 import { devFsPlugin } from "./src/server/devfs"
 import { graphifyPlugin } from "./src/server/graphify"
+import { researchPlugin } from "./src/server/research"
 import { telemetryPlugin } from "./src/server/telemetry"
 
 const SERVICE_JSON = homedir() + "/.local/state/opencode/service.json"
@@ -49,6 +50,7 @@ export default defineConfig({
     telemetryPlugin(),
     graphifyPlugin(),
     devFsPlugin(),
+    researchPlugin(),
   ],
   resolve: {
     alias: {

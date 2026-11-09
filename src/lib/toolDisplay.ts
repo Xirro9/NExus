@@ -13,6 +13,7 @@ export type ToolKind =
   | "grep"
   | "glob"
   | "subagent"
+  | "research"
   | "other"
 
 export interface ToolCallDisplay {
@@ -35,6 +36,14 @@ const TOOL_KINDS: Record<string, ToolKind> = {
   grep: "grep",
   glob: "glob",
   subagent: "subagent",
+  // research-library plugin: the six bare tools (T5) — honest card titles
+  // below; webfetch/websearch stay kind "other" (pinned by tests)
+  research_library_search: "research",
+  research_library_list: "research",
+  research_library_get: "research",
+  research_library_import: "research",
+  research_library_refresh: "research",
+  research_library_status: "research",
 }
 
 const DETAIL_MAX = 120
@@ -116,6 +125,40 @@ function firstPattern(input: unknown): string | null {
   return asString(input.pattern)
 }
 
+// --- Research source classification (T5) -------------------------------------
+// Researcher sessions blend library tools with web tools; the Research view's
+// activity tally counts the two separately. Unresolved names count as NEITHER
+// — never guess. Purely additive: the ToolKind classification above (and the
+// webfetch → "other" pin in toolDisplay.test.ts) is untouched.
+
+const INTERNAL_RESEARCH_PREFIX = "research_library_"
+
+export function researchSourceOf(name: string): "internal" | "external" | null {
+  const n = name.toLowerCase()
+  if (n.startsWith(INTERNAL_RESEARCH_PREFIX)) return "internal"
+  if (n === "webfetch" || n === "websearch") return "external"
+  return null
+}
+
+/** Honest card titles for the six bare research-library tools — the raw
+ *  `research_library_get` name means nothing to a reader, "Library document"
+ *  does. Unknown research names fall back to the capitalized tool name. */
+const RESEARCH_TITLES: Record<string, string> = {
+  research_library_search: "Library search",
+  research_library_list: "Library list",
+  research_library_get: "Library document",
+  research_library_import: "Library import",
+  research_library_refresh: "Library reindex",
+  research_library_status: "Library status",
+}
+
+/** Detail for a research tool call: the first of query/slug/docId actually
+ *  present in the input — never fabricated for tools that take none. */
+function researchDetail(input: unknown): string | null {
+  if (!isRecord(input)) return null
+  return asString(input.query) ?? asString(input.slug) ?? asString(input.docId)
+}
+
 /**
  * Human display summary for a tool call. `input`/`metadata` may be missing
  * or any shape; unknown tools fall back to a title plus an input-key list.
@@ -186,6 +229,16 @@ export function formatToolCall(
         filePaths,
         kind,
         ...(childSessionID ? { subagentSessionID: childSessionID } : {}),
+      }
+    }
+    case "research": {
+      const n = label.toLowerCase()
+      const detail = researchDetail(input)
+      return {
+        title: RESEARCH_TITLES[n] ?? capitalize(label),
+        ...(detail !== null ? { detail: truncate(detail) } : {}),
+        filePaths,
+        kind,
       }
     }
     case "other": {

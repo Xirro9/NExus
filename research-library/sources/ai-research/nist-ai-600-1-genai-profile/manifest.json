@@ -1,0 +1,42 @@
+{
+  "schema": 1,
+  "collection": "ai-research",
+  "slug": "nist-ai-600-1-genai-profile",
+  "title": "Artificial Intelligence Risk Management Framework: Generative Artificial Intelligence Profile (NIST AI 600-1)",
+  "sourceUrl": "https://www.nist.gov/publications/artificial-intelligence-risk-management-framework-generative-artificial-intelligence",
+  "publicationDate": "2024-07-26",
+  "version": "current",
+  "status": "verified",
+  "notes": "Summary ingested from the NIST publication page for AI 600-1 (abstract and metadata) and the NIST AI RMF program page, both fetched live 2026-11-09; full text: https://doi.org/10.6028/NIST.AI.600-1 (PDF not fetchable as text this session). Relevance: the GenAI Profile's risk taxonomy complements the bill's SEC. 4 risk-domain evaluation criteria (CBRN, offensive cyber, autonomous loss-of-control) and AI red-teaming definition.",
+  "verifiedAt": 1794256213589,
+  "sections": [
+    {
+      "anchor": "abstract",
+      "heading": "Abstract",
+      "body": "This document is a cross-sectoral profile of and companion resource for the AI Risk Management Framework (AI RMF 1.0) for Generative AI, pursuant to President Biden's Executive Order (EO) 14110 on Safe, Secure, and Trustworthy Artificial Intelligence. The AI RMF was released in January 2023, and is intended for voluntary use and to improve the ability of organizations to incorporate trustworthiness considerations into the design, development, use, and evaluation of AI products, services, and systems."
+    },
+    {
+      "anchor": "publication-details",
+      "heading": "Publication details",
+      "body": "Report number: NIST AI 600-1 (NIST Trustworthy and Responsible AI series).\nPublished: July 26, 2024 (NIST publication page created July 26, 2024, updated April 8, 2026).\nAuthors: Chloe Autio, Reva Schwartz, Jesse Dunietz, Shomik Jain, Martin Stanley, Elham Tabassi, Patrick Hall, Kamie Roberts.\nDOI: https://doi.org/10.6028/NIST.AI.600-1\nKeywords (NIST publication page): Artificial Intelligence, AI, Risk Management Framework, Generative AI, Cross-sectoral profile, AI Lifecycle, AI Actor, GAI, GAI Risk."
+    },
+    {
+      "anchor": "program-context",
+      "heading": "AI RMF program context (checked 2026-11-09)",
+      "body": "From the NIST AI RMF program page (https://www.nist.gov/itl/ai-risk-management-framework), fetched live 2026-11-09: \"On July 26, 2024, NIST released NIST-AI-600-1, Artificial Intelligence Risk Management Framework: Generative Artificial Intelligence Profile. The profile can help organizations identify unique risks posed by generative AI and proposes actions for generative AI risk management that best aligns with their goals and priorities.\""
+    },
+    {
+      "anchor": "relevance",
+      "heading": "Relevance to S. 5471",
+      "body": "The bill's SEC. 4 evaluation-criteria mandate — risk-profile evaluation across chemical, biological, radiological, and nuclear risk, offensive cyber risk, and autonomous loss-of-control risk, with testing procedures such as AI red-teaming — overlaps with the GenAI Profile's generative-AI risk taxonomy and its pre-deployment testing and incident-disclosure considerations. This record is a summary of the profile's official publication metadata and program context, not the full profile text."
+    }
+  ],
+  "revisions": [
+    {
+      "revision": 1,
+      "contentHash": "6aaac4bfe251dec87ad7610e0943a5e8f85cc5c3453c528a7c5b7f3f5ea32565",
+      "retrievedAt": 1794256204716,
+      "file": "research-library/sources/ai-research/nist-ai-600-1-genai-profile/r1-6aaac4bf.html"
+    }
+  ]
+}

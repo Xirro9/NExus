@@ -3,8 +3,8 @@
 // View mounting rules (SPEC-PHASE3 §1):
 //  - ChatPanel: stays mounted + hidden (Phase 2 rule) — scroll + SSE untouched
 //  - DashboardView: lazy-mount on first open, stays mounted with `visible`
-//  - Agents/Activity/History/Projects/System/Settings: lazy-mount on first open AND unmount on
-//    tab leave (xyflow zero-measure guard; no streaming state worth keeping —
+//  - Agents/Activity/History/Projects/Research/System/Settings: lazy-mount on first open AND
+//    unmount on tab leave (xyflow zero-measure guard; no streaming state worth keeping —
 //    stores persist the data so remounts are instant)
 //  - every view is React.lazy so view code never enters the main chunk
 
@@ -44,6 +44,9 @@ const SystemView = lazy(() =>
 const SettingsView = lazy(() =>
   import("@/components/settings/SettingsView").then((m) => ({ default: m.SettingsView })),
 )
+const ResearchView = lazy(() =>
+  import("@/components/research/ResearchView").then((m) => ({ default: m.ResearchView })),
+)
 
 const RAIL_KEY = "nexus.railCollapsed"
 const MAIN_VIEW_KEY = "nexus.mainView"
@@ -60,7 +63,7 @@ export function AppShell() {
   const [mainView, setMainView] = useState<MainView>(() => {
     const stored = localStorage.getItem(MAIN_VIEW_KEY) ?? ""
     // unknown stored values fall back to "chat" (§1)
-    return (["chat", "dashboard", "activity", "agents", "history", "projects", "system", "settings"] as const).includes(
+    return (["chat", "dashboard", "activity", "agents", "history", "projects", "research", "system", "settings"] as const).includes(
       stored as MainView,
     )
       ? (stored as MainView)
@@ -148,6 +151,11 @@ export function AppShell() {
                   onBrowseAll={browseProjectHistory}
                   onOpenSession={openSessionInChat}
                 />
+              </Suspense>
+            )}
+            {mainView === "research" && (
+              <Suspense>
+                <ResearchView onOpenSession={openSessionInChat} />
               </Suspense>
             )}
             {mainView === "system" && (

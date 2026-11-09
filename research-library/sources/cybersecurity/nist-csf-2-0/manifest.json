@@ -1,0 +1,42 @@
+{
+  "schema": 1,
+  "collection": "cybersecurity",
+  "slug": "nist-csf-2-0",
+  "title": "The NIST Cybersecurity Framework (CSF) 2.0, NIST CSWP 29",
+  "sourceUrl": "https://csrc.nist.gov/pubs/cswp/29/the-nist-cybersecurity-framework-csf-20/final",
+  "publicationDate": "2024-02-26",
+  "version": "current",
+  "status": "verified",
+  "notes": "Summary ingested from the CSRC publication page for CSWP 29 (abstract, dates, DOI) and the NIST CSF hub page, both fetched live 2026-11-09; full text: https://doi.org/10.6028/NIST.CSWP.29, PDF https://nvlpubs.nist.gov/nistpubs/CSWP/NIST.CSWP.29.pdf (PDFs not fetchable as text this session). Relevance: applicable framework reference for S. 5471 SEC. 4(b)(1)(D)(iii)(I) traditional cybersecurity protocols (access controls, multi-factor authentication), cf. CSF Core PR.AA.",
+  "verifiedAt": 1794256213666,
+  "sections": [
+    {
+      "anchor": "abstract",
+      "heading": "Abstract",
+      "body": "The NIST Cybersecurity Framework (CSF) 2.0 provides guidance to industry, government agencies, and other organizations to manage cybersecurity risks. It offers a taxonomy of high-level cybersecurity outcomes that can be used by any organization — regardless of its size, sector, or maturity — to better understand, assess, prioritize, and communicate its cybersecurity efforts. The CSF does not prescribe how outcomes should be achieved. Rather, it links to online resources that provide additional guidance on practices and controls that could be used to achieve those outcomes. This document describes CSF 2.0, its components, and some of the many ways that it can be used."
+    },
+    {
+      "anchor": "publication-details",
+      "heading": "Publication details",
+      "body": "Publication: NIST CSWP 29, \"The NIST Cybersecurity Framework (CSF) 2.0\".\nDate Published: February 26, 2024 (CSRC publication page). Document history: 08/08/23 CSWP 29 (Draft); 02/26/24 CSWP 29 (Final).\nDOI: https://doi.org/10.6028/NIST.CSWP.29 (full PDF: https://nvlpubs.nist.gov/nistpubs/CSWP/NIST.CSWP.29.pdf).\nCSRC planning note (09/24/2024): a new spreadsheet, \"CSF 1.1 to 2.0 Core Transition Changes Overview,\" is available.\nRelated NIST publications listed by CSRC: SP 1299 (CSF 2.0 Resource and Overview Guide), SP 1300 (Small Business Quick-Start Guide), SP 1301 (Quick-Start Guide for Creating and Using Organizational Profiles), IR 8286 Rev. 1, CSWP 50.\nCSF hub page: https://www.nist.gov/cyberframework.\nNote to readers (CSF 2.0 document, as surfaced via NIST sources): before version 2.0, the Cybersecurity Framework was called the \"Framework for Improving Critical Infrastructure Cybersecurity\"; that title is not used for CSF 2.0. CSF 2.0's new features highlight the importance of governance and supply chains."
+    },
+    {
+      "anchor": "hub-updates",
+      "heading": "CSF hub page updates (checked 2026-11-09)",
+      "body": "From the NIST CSF hub page (https://www.nist.gov/cyberframework), fetched live 2026-11-09: CSF 2.0 is positioned \"For industry, government, and organizations to reduce cybersecurity risks,\" with a CSF 2.0 Resource Center offering the document, Quick Start Guides, Profiles, Informative References (Mappings), FAQs, videos, translations, and a CSF 2.0 Tool. Latest updates shown on the hub page (as of 2026-11-09): public comments on NIST SP 800-221r1 ipd (Enterprise Impact of ICT Risk) open until December 7, 2026; a draft CSF 2.0 Community Profile for Federal Agency Open Radio Access Network (O-RAN) Deployment available for comment; the final CSF 2.0 Informative References Quick-Start Guide published; CSF 2.0 translated into Arabic; and a two-year CSF 2.0 anniversary blog dated February 24, 2026."
+    },
+    {
+      "anchor": "relevance",
+      "heading": "Relevance to S. 5471",
+      "body": "S. 5471 SEC. 4(b)(1)(D)(iii) requires covered-model disclosures to cover \"traditional cybersecurity protocols, such as access controls and multi-factor authentication\" alongside AI-specific protections; CSF 2.0 is the applicable voluntary outcome framework for that traditional side — its CSF Core organizes outcomes by Function, including Protect (PR) with the category \"Identity Management, Authentication, and Access Control\" (PR.AA) and Govern (GV) including \"Cybersecurity Supply Chain Risk Management\" (GV.SC), per the CSF 2.0 Core appendix. This record is a summary from the CSRC publication page and the CSF hub page, not the full framework text."
+    }
+  ],
+  "revisions": [
+    {
+      "revision": 1,
+      "contentHash": "a31a60e371ec4140709ab09f82bbc634fc5a9dca3833f64d476029c6a941387d",
+      "retrievedAt": 1794256204791,
+      "file": "research-library/sources/cybersecurity/nist-csf-2-0/r1-a31a60e3.html"
+    }
+  ]
+}

@@ -15,6 +15,10 @@ dist-ssr
 # Graphify code-knowledge graph (per-project, machine-local build artifact)
 graphify-out/
 
+# Research library derived artifacts (rebuildable from sources/ + manifests)
+research-library/indexes/
+research-library/cache/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

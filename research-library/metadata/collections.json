@@ -1,0 +1,29 @@
+{
+  "collections": {
+    "legislation": {
+      "name": "Legislation",
+      "description": "Bills, public laws and congressional materials (congress.gov, govinfo).",
+      "ttlDays": 30
+    },
+    "cybersecurity": {
+      "name": "Cybersecurity",
+      "description": "Advisories, threat reports and hardening guidance (CISA, NIST, vendors).",
+      "ttlDays": 90
+    },
+    "ai-research": {
+      "name": "AI Research",
+      "description": "Papers, model documentation and technical AI-policy analysis.",
+      "ttlDays": 180
+    },
+    "technical-docs": {
+      "name": "Technical Documentation",
+      "description": "Standards, API references and tooling manuals.",
+      "ttlDays": 365
+    },
+    "projects": {
+      "name": "Projects",
+      "description": "Project-local working documents and notes.",
+      "ttlDays": 30
+    }
+  }
+}

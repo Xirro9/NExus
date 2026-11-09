@@ -12,6 +12,7 @@
 import { useMemo, useState, type ReactNode } from "react"
 import {
   Activity,
+  BookOpen,
   Cpu,
   Folder,
   FolderOpen,
@@ -169,6 +170,12 @@ export function Sidebar({
                 />
               ) : undefined
             }
+          />
+          <NavItem
+            icon={BookOpen}
+            label="Research"
+            active={view === "research"}
+            onClick={() => onNavigate?.("research")}
           />
         </NavGroup>
         <NavGroup label="System">

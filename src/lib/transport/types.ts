@@ -7,6 +7,13 @@ import type {
   NexusEvent,
   StreamState,
 } from "@/lib/opencode/sse"
+import type {
+  CollectionSummary,
+  DocumentRecord,
+  LibraryStatus,
+  ReindexResult,
+  SearchHit,
+} from "@/lib/research/engine"
 import type { TelemetrySnapshot } from "@/lib/telemetry/types"
 
 export interface TransportRequestInit {
@@ -67,6 +74,30 @@ export interface CreateDirResult {
   existed: boolean
 }
 
+// --- Research library read surface (pipeline T3) -----------------------------
+// Both transports route to a host-side reader (Rust research.rs spawning the
+// research-library CLI in Tauri, the Vite dev middleware calling the engine
+// in-process in the browser). READ-ONLY BY DESIGN — no import/write method
+// exists on this seam; reindex is the single write-adjacent operation (it
+// rebuilds the derived index from the manifests that are the unit of record).
+// The shapes below are ALIASES of the engine's exported interfaces — single
+// source of truth, zero drift (import type is erased, so the node:-only
+// engine never enters the browser bundle; research.rs mirrors them camelCase).
+
+export type ResearchCollectionSummary = CollectionSummary
+export type ResearchSearchHit = SearchHit
+export type ResearchDocumentRecord = DocumentRecord
+export type ResearchReindexResult = ReindexResult
+export type ResearchStatus = LibraryStatus
+
+/** middleware/CLI envelope around the engine's {hits, tookMs} — q echoed
+ *  from the request so the UI can correlate results. */
+export interface ResearchSearchResult {
+  q: string
+  hits: ResearchSearchHit[]
+  tookMs: number
+}
+
 export interface Transport {
   request(path: string, init?: TransportRequestInit): Promise<TransportResponse>
   telemetrySnapshot(): Promise<TelemetrySnapshot>
@@ -81,4 +112,26 @@ export interface Transport {
    *  empty/relative/NUL/./.. paths; the host side canonicalizes. Not an error
    *  when the directory already exists (existed:true comes back). */
   createDir(path: string): Promise<CreateDirResult>
+  /** Research library status. root=null lets the host resolve it (browser:
+   *  engine walk-up from cwd; desktop: RESEARCH_LIBRARY_ROOT env — an honest
+   *  error when unset, never a fake-empty result). The payload's root is how
+   *  the UI seeds its stored library path. */
+  researchStatus(root: string | null): Promise<ResearchStatus>
+  researchCollections(root: string): Promise<ResearchCollectionSummary[]>
+  researchSearch(
+    root: string,
+    q: string,
+    opts?: { collection?: string; limit?: number; scope?: "all" | "documents" | "sections" },
+  ): Promise<ResearchSearchResult>
+  /** Document read; resolves null for an honest not-found (missing doc OR a
+   *  section filter that matched nothing). Section bodies ride along, capped
+   *  per section by maxChars (engine default 12,000). */
+  researchDocument(
+    root: string,
+    id: string,
+    opts?: { section?: string; maxChars?: number },
+  ): Promise<ResearchDocumentRecord | null>
+  /** Rebuild the derived index from sources/**\/manifest.json. The only
+   *  write-adjacent operation on this seam. */
+  researchReindex(root: string): Promise<ResearchReindexResult>
 }

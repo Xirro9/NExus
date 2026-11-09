@@ -39,6 +39,33 @@ None. Queued follow-ups: scheduleRefetch should union state.pendingRefetch (two 
 | 2026-11-09 | reviewer | Delta gate on refetch fix | APPROVE (queued follow-up: scheduleRefetch union pendingRefetch — pre-existing 500ms loss windows) |
 | 2026-11-09 | primary | Commit 46c65aa + cf05615, build ritual, restart (lock PID 1195659 verified), push | done |
 
+## Research Library + Researcher agent (2026-11-09)
+
+Persistent local research library (`research-library/`, SQLite FTS5 via node:sqlite, zero npm deps) + OpenCode V2 plugin (`research_library_*` tools) + `researcher` subagent + Jerry Research tab. Pipeline: architect spec → developer (engine+CLI, plugin+agent, transport/middleware/research.rs) → researcher content pass → ui-designer → developer wiring → reviewer APPROVE (7 non-blocking findings; 1–3 fixed same day, 4–7 queued).
+
+| 2026-11-09 | architect | Full spec D1–D12 (engine/CLI/plugin/agent/middleware/Rust-spawns-CLI/UI/verification) | done |
+| 2026-11-09 | developer | T1 engine + CLI + library skeleton (node:sqlite FTS5; sources/+manifests = unit of record, DB derived; dedupe (collection,source_url,version)+sha256; revisions/supersede; staleness computed at read, TTLs 30/90/180/365/30d) | done — 34 engine tests |
+| 2026-11-09 | developer | T2 V2 plugin (6 bare tools, one ctx.tool.transform, setup never throws) + researcher agent (V2 frontmatter: steps 24, deny edit/subagent/shell, allow read/glob/grep/webfetch/websearch; mandatory internal-first 5-step order) | done — live-probed in-session |
+| 2026-11-09 | developer | T3 read surface: src/server/research.ts middleware (in-process, read-only + reindex POST) ⇄ src-tauri/research.rs (validate() + spawn node CLI --json, 60s/300s, 256KB cap) + Transport Research* type aliases | done — cargo 6 new validate tests, live curl probes |
+| 2026-11-09 | researcher | T4 content pass: 7 docs ingested + verified (S.5471 bill text 8 sections + congressional status; NIST AI RMF 1.0, AI 600-1, OMB M-25-21/22; NIST CSF 2.0, SP 800-53 r5), 35 sections, reindex 0 skipped; legislation README (proposed-vs-enacted rule) | done |
+| 2026-11-09 | designer | T5 Research view ×7 components (status strip, FTS search, collection grid, doc detail with staged section fetch, researcher activity with internal/external tally) | done — 7.5 kB gz chunk, live-smoked |
+| 2026-11-09 | developer | T5 wiring: store/research.ts (seed-once root, seq guard) + toolDisplay "research" kind + researchSourceOf + 3-site shell wiring (MainTabs/AppShell/Sidebar) | done — 207 tests |
+| 2026-11-09 | reviewer | Full gate | APPROVE — findings 1 (verified→verified manifest clock bump), 2 (readManifest caps), 3 (FTS UPDATE test pin) fixed same day; nits 4–7 queued |
+
+### A/B verification (researcher with library vs empty library, same 3 questions)
+
+Method: `opencode run` delegating to the `researcher` subagent; arm B pointed `RESEARCH_LIBRARY_ROOT` at an empty root (standalone server). Answers graded against the ingested corpus ground truth.
+
+| Question | A wall | A tools | B wall | B tools |
+| --- | --- | --- | --- | --- |
+| SEC. 4 requirements for developers | 287s¹ | 4 library, 0 web | 381s | 4 empty-lib attempts, 0 web → repo file spelunking (read×7/grep×2/glob×2) |
+| Current legislative status of S. 5471 | 69s | 4 library, 0 web | 103s | 3 attempts + 1 webfetch (congress.gov live) |
+| Cybersecurity in SEC. 4(b)(1)(D)(iii) | 71s | 5 library, 0 web | 112s | 6 attempts + repo file spelunking |
+
+¹ First run includes one-time harness warmup; median A ≈ 71s vs median B ≈ 112s (~1.6×). All six answers factually correct with exact section citations — accuracy parity; arm A never touched the network. Caveat: arm-B isolation is imperfect by design — the researcher's read/grep access lets it fall back to the repo's `research-library/sources/` raw files (an honest internal fallback that still beats web-only research but lacks section-level FTS precision).
+
+Deterministic retrieval: FTS search ≈ 1.9 ms engine-side (~60 ms wall incl. Node startup); full reindex 7 docs/35 sections ≈ 199 ms. Ingestion is CLI/tools-only; the browser surface is read-only by construction.
+
 ## Prior context (pre-VNEXT, from project memory)
 - P0 session management shipped 2026-11-05 (commit 1ff6680): priority/stop/kill/delete/bulk + Graphify integration
 - Dark native select fix 782a2c0 (color-scheme)

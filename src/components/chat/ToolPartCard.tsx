@@ -12,6 +12,7 @@ import type { ToolPart } from "@/lib/opencode/types"
 import { formatToolCall, type ToolKind } from "@/lib/toolDisplay"
 import {
   Bot,
+  BookOpen,
   Check,
   ChevronRight,
   Eye,
@@ -34,6 +35,9 @@ const KIND_ICONS: Record<ToolKind, typeof Wrench> = {
   grep: Search,
   glob: FolderSearch,
   subagent: Bot,
+  // research-library tools (T5): library reads — same book icon as the
+  // sidebar's Research destination
+  research: BookOpen,
   other: Wrench,
 }
 
@@ -43,6 +47,8 @@ const KIND_TINT: Record<ToolKind, string> = {
   read: "border-border/60 bg-muted/60 text-muted-foreground",
   grep: "border-border/60 bg-muted/60 text-muted-foreground",
   glob: "border-border/60 bg-muted/60 text-muted-foreground",
+  // read-only library inspection — neutral like the other inspection tools
+  research: "border-border/60 bg-muted/60 text-muted-foreground",
   other: "border-border/60 bg-muted/60 text-muted-foreground",
   bash: "border-primary/25 bg-primary/10 text-primary",
   subagent: "border-primary/25 bg-primary/10 text-primary",
