@@ -1,0 +1,32 @@
+{
+  "schema": 1,
+  "collection": "technical-docs",
+  "slug": "nvidia-parakeet-tdt-0-6b-v3",
+  "title": "NVIDIA Parakeet TDT 0.6B v3 — ASR model card",
+  "sourceUrl": "https://huggingface.co/nvidia/parakeet-tdt-0.6b-v3",
+  "publicationDate": "2025-08-14",
+  "version": "v3",
+  "status": "verified",
+  "notes": "Verified live 2026-11-09 (HF card). Weights CC-BY-4.0. CPU viability rests on sherpa-onnx int8 exports (ESTIMATE — P1 spike must measure). Relevance: Jerry SPEC-VOICE default STT (CPU = zero GLM GPU contention).",
+  "verifiedAt": 1794277270990,
+  "sections": [
+    {
+      "anchor": "facts",
+      "heading": "Verified facts",
+      "body": "CC-BY-4.0; 0.6B TDT; 6.34% avg leaderboard WER; RTFx 3332 (throughput); 25 EU langs + auto lang-ID; punctuation/caps built-in; 2025-08-14; Blackwell compatible."
+    },
+    {
+      "anchor": "streaming",
+      "heading": "Streaming",
+      "body": "TDT transducer; NeMo chunked streaming (2s/2s); sherpa simulate-streaming mic examples. Batch-per-utterance is the simplest correct integration for short conversational turns."
+    }
+  ],
+  "revisions": [
+    {
+      "revision": 1,
+      "contentHash": "d14c338b53e5d87e1d7e0a5a3571d5ca2dd75fe8c1bf861f3a0d6bd23f122418",
+      "retrievedAt": 1794277270990,
+      "file": "research-library/sources/technical-docs/nvidia-parakeet-tdt-0-6b-v3/r1-d14c338b.txt"
+    }
+  ]
+}

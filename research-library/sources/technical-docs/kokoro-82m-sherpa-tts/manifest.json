@@ -1,0 +1,32 @@
+{
+  "schema": 1,
+  "collection": "technical-docs",
+  "slug": "kokoro-82m-sherpa-tts",
+  "title": "Kokoro-82M TTS via sherpa-onnx (int8 asset, lexicon frontend)",
+  "sourceUrl": "https://github.com/k2-fsa/sherpa-onnx/releases",
+  "publicationDate": "2025-01-01",
+  "version": "v1.1 (int8 multi-lang)",
+  "status": "verified",
+  "notes": "Verified live 2026-11-09 (k2-fsa TTS docs + release assets + PR #4055 + issue #4139). Weights Apache-2.0. Relevance: Jerry SPEC-VOICE TTS pick (sentence-chunked, CPU, int8).",
+  "verifiedAt": 1794277271076,
+  "sections": [
+    {
+      "anchor": "facts",
+      "heading": "Verified facts",
+      "body": "Apache-2.0 weights; 54 voices; UTMOS ~4.44; 24kHz output; sherpa int8 asset kokoro-int8-multi-lang-v1_1 + voices.bin 26MB; whole-utterance 9.6s TTFA per 17s text -> chunking mandatory; fp32 RSS ~1.2GB."
+    },
+    {
+      "anchor": "lexicon-regression",
+      "heading": "v2.x lexicon frontend regression",
+      "body": "PR #4055 removed espeak (GPL-free, data_dir ignored). Issue #4139: numbers and OOV words dropped by lexicon frontend. Mitigations: spelled-out-numbers system prompt; P1 lexicon listening test; fallback Pocket TTS fp32 (int8 disqualified by #3172)."
+    }
+  ],
+  "revisions": [
+    {
+      "revision": 1,
+      "contentHash": "d6fdd4c70f13956e8407ac5f613fd4a021324dd74fac9a6327cd3c89a18bea0a",
+      "retrievedAt": 1794277271076,
+      "file": "research-library/sources/technical-docs/kokoro-82m-sherpa-tts/r1-d6fdd4c7.txt"
+    }
+  ]
+}

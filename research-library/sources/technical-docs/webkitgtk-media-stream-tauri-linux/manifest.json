@@ -1,0 +1,27 @@
+{
+  "schema": 1,
+  "collection": "technical-docs",
+  "slug": "webkitgtk-media-stream-tauri-linux",
+  "title": "WebKitGTK media-stream/WebRTC status on Tauri Linux (getUserMedia not viable)",
+  "sourceUrl": "https://webkitgtk.org/",
+  "publicationDate": "2026-11-09",
+  "version": "webkit2gtk-4.1 (Ubuntu 24.04)",
+  "status": "verified",
+  "notes": "Verified live 2026-11-09 (webkitgtk.org, webkit2gtk docs, tauri issues #8851/#2600/#13143, rcq-desktop DESKTOP.md, KittyCAD issue #625). Relevance: Jerry SPEC-VOICE capture-layer decision — Rust cpal, not webview.",
+  "verifiedAt": 1794277271244,
+  "sections": [
+    {
+      "anchor": "verdict",
+      "heading": "Verdict",
+      "body": "Do NOT architect webview mic capture or webview audio playback on Tauri Linux. Capture = cpal Rust-side; playback = rodio Rust-side; both avoid WebKitGTK version churn and CSP changes."
+    }
+  ],
+  "revisions": [
+    {
+      "revision": 1,
+      "contentHash": "fa4f9b2a2f722ce3cbd0875c9654ee71f87ceb165ab82b703d45ffcdb83fcfe6",
+      "retrievedAt": 1794277271244,
+      "file": "research-library/sources/technical-docs/webkitgtk-media-stream-tauri-linux/r1-fa4f9b2a.txt"
+    }
+  ]
+}

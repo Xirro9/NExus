@@ -1,0 +1,32 @@
+{
+  "schema": 1,
+  "collection": "technical-docs",
+  "slug": "pipecat-smart-turn-v3-2",
+  "title": "Pipecat Smart Turn v3.2 — semantic end-of-turn detector (standalone ONNX)",
+  "sourceUrl": "https://github.com/pipecat-ai/smart-turn",
+  "publicationDate": "2026-01-01",
+  "version": "v3.2",
+  "status": "verified",
+  "notes": "Verified live 2026-11-09 (repo README + Daily.co announcement). BSD-2-Clause code AND weights. Relevance: Jerry SPEC-VOICE semantic EOT layer, runs standalone via raw ORT during Silero silence.",
+  "verifiedAt": 1794277270903,
+  "sections": [
+    {
+      "anchor": "facts",
+      "heading": "Verified facts",
+      "body": "BSD-2 code+weights; 8MB int8 CPU / 32MB fp32 GPU; ~8M params; 23 langs; 10-12ms modern CPU / ~60ms cheap vCPU / 3.3ms L40S; 16kHz mono <=8s context; runs only during Silero silence; standalone raw-ORT usage supported."
+    },
+    {
+      "anchor": "long-utterance-policy",
+      "heading": "Official >8s policy",
+      "body": "Truncate from the beginning, keep the last ~8s, zero-pad at beginning; re-run on the entire turn recording when new speech arrives. Semantic quality on long monologues then depends on the tail window only."
+    }
+  ],
+  "revisions": [
+    {
+      "revision": 1,
+      "contentHash": "285c9830070ebdf4720dffbdeb1309febb1c35448da318cf5ca0337198faa210",
+      "retrievedAt": 1794277270903,
+      "file": "research-library/sources/technical-docs/pipecat-smart-turn-v3-2/r1-285c9830.txt"
+    }
+  ]
+}

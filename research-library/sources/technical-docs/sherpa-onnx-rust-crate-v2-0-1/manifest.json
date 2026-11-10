@@ -1,0 +1,37 @@
+{
+  "schema": 1,
+  "collection": "technical-docs",
+  "slug": "sherpa-onnx-rust-crate-v2-0-1",
+  "title": "sherpa-onnx official Rust crate v2.0.1 (k2-fsa)",
+  "sourceUrl": "https://crates.io/crates/sherpa-onnx",
+  "publicationDate": "2026-10-27",
+  "version": "2.0.1",
+  "status": "verified",
+  "notes": "Verified live 2026-11-09 (crates.io API + docs.rs + k2-fsa docs + release notes + PR #4055 + issues #4139/#3172). Apache-2.0. Supersedes thewh1teagle/sherpa-rs (archived 2026-06-06). Relevance: sole VAD+STT+TTS+KWS dependency for Jerry SPEC-VOICE.",
+  "verifiedAt": 1794277270807,
+  "sections": [
+    {
+      "anchor": "crate-facts",
+      "heading": "Crate facts",
+      "body": "v2.0.1 2026-10-27, Apache-2.0, default static feature, static-lib auto-download at build time, onnxruntime 1.28.2, CPU default / GPU manual (CUDA 12.8 + cuDNN 9), Tauri examples shipped, v2.0.0+v2.0.1 within 4 days."
+    },
+    {
+      "anchor": "model-coverage",
+      "heading": "Model coverage",
+      "body": "STT: Whisper, Moonshine v2, Qwen3-ASR, Parakeet TDT, Nemotron streaming, Zipformer. TTS: Kokoro, Pocket, Matcha, VITS, Kitten, Supertonic. VAD: Silero, Ten VAD. KWS: open-vocab Zipformer RTF 0.036."
+    },
+    {
+      "anchor": "v2-breaking-tts",
+      "heading": "v2.0.0 TTS frontend breaking change",
+      "body": "PR #4055 removed espeak-ng + piper-phonemize (GPL-free); data_dir deprecated/ignored; lexicon frontend; issue #4139 lexicon drops numbers/OOV; issue #3172 Pocket int8 quality root cause -> use fp32 bundle."
+    }
+  ],
+  "revisions": [
+    {
+      "revision": 1,
+      "contentHash": "44777de0c5f5ae1d60e1b5dd9f6ff53beb2510c93289cb91b18a0e04aaba32cf",
+      "retrievedAt": 1794277270807,
+      "file": "research-library/sources/technical-docs/sherpa-onnx-rust-crate-v2-0-1/r1-44777de0.txt"
+    }
+  ]
+}

@@ -1,0 +1,32 @@
+{
+  "schema": 1,
+  "collection": "technical-docs",
+  "slug": "handy-tauri-dictation-reference",
+  "title": "Handy (cjpais) — Tauri 2 dictation app, production reference for Rust-side audio",
+  "sourceUrl": "https://github.com/cjpais/Handy",
+  "publicationDate": "2026-11-07",
+  "version": "0.10.0",
+  "status": "verified",
+  "notes": "Verified live 2026-11-09 (GitHub API + raw Cargo.toml + README + crates.io). MIT, 38,196 stars, pushed 2026-11-07. Relevance: Jerry SPEC-VOICE reference implementation for capture/playback/model-bootstrap patterns.",
+  "verifiedAt": 1794277271161,
+  "sections": [
+    {
+      "anchor": "architecture",
+      "heading": "Production pattern",
+      "body": "cpal Rust-side capture 16kHz mono f32 -> Silero VAD -> transcribe-cpp GGUF STT -> clipboard/paste. rodio+symphonia playback Rust-side. hf-hub model downloads. global-shortcut + rdev hotkeys. Zero webview audio."
+    },
+    {
+      "anchor": "webkitgtk-battle-scars",
+      "heading": "WebKitGTK battle scars",
+      "body": "Three renderer workarounds (per-version WEBKIT_DMABUF_RENDERER etc.); SIGUSR1 must not be listened for (WebKitGTK uses it for JS GC — phantom recordings). Confirms avoiding webview media entirely."
+    }
+  ],
+  "revisions": [
+    {
+      "revision": 1,
+      "contentHash": "8e4d55bc75ffdf32cefb7706ae6f90326d3f3ece82532256413cc238812dd367",
+      "retrievedAt": 1794277271161,
+      "file": "research-library/sources/technical-docs/handy-tauri-dictation-reference/r1-8e4d55bc.txt"
+    }
+  ]
+}
